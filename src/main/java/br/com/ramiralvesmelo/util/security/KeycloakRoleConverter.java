@@ -11,9 +11,13 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
-/**
- * Converte os claims do Keycloak em GrantedAuthority: - realm_access.roles ->
- * ROLE_* - resource_access["app-demo-api"].roles -> ROLE_*
+/***
+ * Classe que traduz o JWT do Keycloak para o GrantedAuthority do Spring Security.
+ * Ela garante que as roles que vêm do Keycloak sejam entendidas pelo Spring como perfis de acesso
+ * 
+ * Exp.: admin => ROLE_admin
+ * 
+ * @PreAuthorize("hasRole('admin')") 
  */
 public class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
 
