@@ -1,9 +1,10 @@
 # 📦 Projeto util
 
 [![Build Status](https://github.com/ramiralvesmelo/util/actions/workflows/maven.yml/badge.svg)](https://github.com/ramiralvesmelo/util/actions/workflows/maven.yml)
-[![CI/CD](https://img.shields.io/github/actions/workflow/status/ramiralvesmelo/util/maven.yml?label=CI%2FCD&logo=githubactions)](https://github.com/ramiralvesmelo/util/actions)
 [![Coverage Status](https://img.shields.io/codecov/c/github/ramiralvesmelo/util?logo=codecov)](https://app.codecov.io/gh/ramiralvesmelo/util)
-
+[![Java](https://img.shields.io/badge/Java-21-blue.svg?logo=java)](https://adoptium.net/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-brightgreen.svg?logo=springboot)](https://spring.io/projects/spring-boot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
@@ -16,11 +17,6 @@
 [![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-
-
-[![Java](https://img.shields.io/badge/Java-21-blue.svg?logo=java)](https://adoptium.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-brightgreen.svg?logo=springboot)](https://spring.io/projects/spring-boot)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 
 O projeto **UTIL** é um módulo de **funcionalidades reutilizáveis**, desenvolvido em **Java 21** (compatível com **Java 24**) e baseado no **Spring Boot 3.3.5**. Ele concentra um conjunto de **classes utilitárias** aplicáveis em diferentes projetos, com o propósito de **centralizar funcionalidades comuns**, **evitar duplicação de código** e **promover boas práticas de desenvolvimento**.
