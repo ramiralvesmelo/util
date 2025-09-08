@@ -19,11 +19,8 @@ permissions:
   contents: read
   packages: write
 
-env:
-  # Container Registry (GitHub Container Registry)
-  REGISTRY: ghcr.io
-  # GitHub Container Registry (GHCR) ex.: ramiralvesmelo/app-demo
-  IMAGE_NAME: ${{ github.repository }}
+env:  
+  PROJECT_NAME: UTIL
 
 jobs:
   ci:
@@ -90,7 +87,7 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login="${SONAR_TOKEN}" \
             -Dsonar.organization=ramiralvesmelo \
-            -Dsonar.projectKey=ramiralvesmelo_app-demo \
+            -Dsonar.projectKey=ramiralvesmelo_util \
             -Dsonar.coverage.jacoco.xmlReportPaths="**/target/site/jacoco/jacoco.xml" \
             -Dsonar.qualitygate.wait=true \
             org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
