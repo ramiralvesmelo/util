@@ -14,6 +14,9 @@
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 
+[![Quality Gate Status NOVO](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util\&metric=alert_status)](https://sonarcloud.io/dashboard?id=ramiralvesmelo_util)
+
+
 [![Java](https://img.shields.io/badge/Java-21-blue.svg?logo=java)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-brightgreen.svg?logo=springboot)](https://spring.io/projects/spring-boot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
