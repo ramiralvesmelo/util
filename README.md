@@ -1,5 +1,18 @@
 # 📦 Projeto util
 
+[![Build Status](https://github.com/ramiralvesmelo/util/actions/workflows/maven.yml/badge.svg)](https://github.com/ramiralvesmelo/util/actions/workflows/maven.yml)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/ramiralvesmelo/util/maven.yml?label=CI%2FCD&logo=githubactions)](https://github.com/ramiralvesmelo/util/actions)
+[![GitHub Release](https://img.shields.io/github/v/release/ramiralvesmelo/util?logo=github)](https://github.com/ramiralvesmelo/util/releases)
+[![Coverage Status](https://img.shields.io/codecov/c/github/ramiralvesmelo/util?logo=codecov)](https://app.codecov.io/gh/ramiralvesmelo/util)
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?projectKey=ramiralvesmelo_util&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?projectKey=ramiralvesmelo_util&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?projectKey=ramiralvesmelo_util&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?projectKey=ramiralvesmelo_util&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+
+[![Java](https://img.shields.io/badge/Java-21-blue.svg?logo=java)](https://adoptium.net/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-brightgreen.svg?logo=springboot)](https://spring.io/projects/spring-boot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 
 
