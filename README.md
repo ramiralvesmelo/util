@@ -14,27 +14,63 @@ Seu objetivo é centralizar funcionalidades comuns, evitando duplicação de có
 
 ---
 
-## 🔑 Funcionalidades principais
 
-### 📧 Validação de e-mails (`EmailUtil`)
+## 📦 Publicar e usar o util no GitHub Packages (Maven)
 
-* Validação sintática com regex robusta
-* Logs de depuração via Lombok `@Slf4j`
+### 1 Configurar o `pom.xml` do projeto util
 
-### ⚠️ Exceções de negócio (`BusinessException`)
+```xml
+<distributionManagement>
+  <repository>
+    <id>github</id>
+    <url>https://maven.pkg.github.com/SEU_USUARIO/SEU_REPOSITORIO</url>
+  </repository>
+</distributionManagement>
+```
 
-* Exceção customizada com suporte a códigos HTTP (`HttpStatus`)
-* Métodos auxiliares para criar exceções comuns (`conflict`, `notFound`)
+### 2 Configurar credenciais no `~/.m2/settings.xml`
 
-### 🆔 Geração de identificadores (`OrderNumberUtil`)
+```xml
+<servers>
+  <server>
+    <id>github</id>
+    <username>SEU_USUARIO</username>
+    <password>${GITHUB_TOKEN}</password>
+  </server>
+</servers>
+```
 
-* Criação de números de pedido únicos no formato `ORD-{ULID}`
-* Baseado em **ULID** (lexicograficamente ordenável e mais legível que UUID)
+### 3 Fazer o deploy
 
-### 🔐 Integração com segurança (Keycloak) (`KeycloakRoleConverter`)
+```bash
+mvn clean deploy
+```
 
-* Conversão automática de **roles do Keycloak** para `GrantedAuthority` do Spring Security
-* Suporte a roles de **realm** e **resource (client-specific)**
+### 4️⃣ Usar em outro projeto
+
+Adicione o repositório:
+
+```xml
+<repositories>
+  <repository>
+    <id>github</id>
+    <url>https://maven.pkg.github.com/SEU_USUARIO/SEU_REPOSITORIO</url>
+  </repository>
+</repositories>
+```
+
+E a dependência:
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>br.com.ramiralvesmelo</groupId>
+    <artifactId>util</artifactId>
+    <version>1.0.0</version>
+  </dependency>
+</dependencies>
+```
+
 
 ---
 
