@@ -9,8 +9,9 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class EmailUtil {
-
-	private static final Pattern EMAIL_PATTERN = Pattern.compile("^(?!.*\\.\\.)[A-Za-z0-9](?:[A-Za-z0-9._%+-]{0,63}[A-Za-z0-9])?@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,}$");
+	
+	private static final Pattern EMAIL_PATTERN = Pattern.compile("^(?!.*+\\.\\.)[A-Za-z0-9](?:(?>[A-Za-z0-9._%+-]{0,63}+)"
+			+ "[A-Za-z0-9])?@(?:(?>[A-Za-z0-9](?>[A-Za-z0-9-]{0,61}+)?[A-Za-z0-9])\\.)+[A-Za-z]{2,}$");
 
 	
 	private EmailUtil() {
