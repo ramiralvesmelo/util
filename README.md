@@ -2,7 +2,6 @@
 
 [![Build Status](https://github.com/ramiralvesmelo/util/actions/workflows/maven.yml/badge.svg)](https://github.com/ramiralvesmelo/util/actions/workflows/maven.yml)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/ramiralvesmelo/util/maven.yml?label=CI%2FCD&logo=githubactions)](https://github.com/ramiralvesmelo/util/actions)
-[![GitHub Release](https://img.shields.io/github/v/release/ramiralvesmelo/util?logo=github)](https://github.com/ramiralvesmelo/util/releases)
 [![Coverage Status](https://img.shields.io/codecov/c/github/ramiralvesmelo/util?logo=codecov)](https://app.codecov.io/gh/ramiralvesmelo/util)
 
 
