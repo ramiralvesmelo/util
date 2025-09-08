@@ -1,0 +1,5 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+util,br.com.ramiralvesmelo.util.number,OrderNumberUtil,0,4,0,0,0,1,0,1,0,1
+util,br.com.ramiralvesmelo.util.email,EmailUtil,8,31,0,4,3,8,0,4,0,2
+util,br.com.ramiralvesmelo.util.security,KeycloakRoleConverter,0,71,0,0,0,10,0,6,0,6
+util,br.com.ramiralvesmelo.util.exception,BusinessException,0,27,0,0,0,8,0,5,0,5

@@ -1,0 +1,184 @@
+name: Executar GitAction
+
+on:
+  # permite execução manual
+  workflow_dispatch:
+    inputs:
+      # diretório raiz do projeto
+      project_dir:
+        description: "Diretório do projeto"
+        required: true
+        default: "."
+      # desabilita multimódulos (builda somente o módulo passado)
+      module_gav:
+        description: "GAV alvo (GroupId, ArtifactId, Version)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  # Container Registry (GitHub Container Registry)
+  REGISTRY: ghcr.io
+  # GitHub Container Registry (GHCR) ex.: ramiralvesmelo/app-demo
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  ci:
+    name: 🔍 CI → Análise de Código & Cobertura
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # necessário para commitar/uploadar artefatos
+      packages: write   # necessário para publicar pacotes no GitHub Packages (dependency graph)
+    steps:
+ 
+      # baixa o código do repositório
+      - name: 📥 Checkout do repositório
+        uses: actions/checkout@v4
+
+      # configura JDK 21 (Temurin) e habilita cache do Maven
+      - name: ⚙️ Configurar JDK 24 + cache Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: maven
+          check-latest: true
+
+      - name: 🔎 Verificar Versão Java | Maven
+        run: |
+          java -version
+          mvn -v                      
+
+      # ----------------------------------------------------------
+      # 🚢 COBERTURA DE TESTE E QUALIDADE DO CÓDIGO
+      # ----------------------------------------------------------
+      - name: 🛠️ Build + Test + Coverage (jacoco.xml)
+        working-directory: ${{ github.event.inputs.project_dir }}
+        run: |
+          set -e
+          if [ -n "${{ github.event.inputs.module_gav }}" ]; then
+            mvn -B -V -DskipTests=false clean verify -am -pl "${{ github.event.inputs.module_gav }}"
+          else
+            mvn -B -V -DskipTests=false clean verify
+          fi
+          if find . -type f -path "*/target/site/jacoco/jacoco.xml" -print -quit >/dev/null; then
+            echo "✅ Relatório de cobertura encontrado."
+          else
+            echo "❌ ERRO: Relatório jacoco.xml não encontrado em */target/site/jacoco/jacoco.xml."
+            exit 1
+          fi
+
+      - name: 📈 Enviar relatório de cobertura para o Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}   # necessário p/ repositórios privados
+          files: "**/target/site/jacoco/jacoco.xml"
+          slug: ${{ github.repository }}
+          fail_ci_if_error: true
+          verbose: false
+
+      - name: 🔎 SonarCloud (Aguarda Quality Gate)
+        working-directory: ${{ github.event.inputs.project_dir }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn -B -V \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login="${SONAR_TOKEN}" \
+            -Dsonar.organization=ramiralvesmelo \
+            -Dsonar.projectKey=ramiralvesmelo_app-demo \
+            -Dsonar.coverage.jacoco.xmlReportPaths="**/target/site/jacoco/jacoco.xml" \
+            -Dsonar.qualitygate.wait=true \
+            org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+
+      # gera SBOM (Software Bill of Materials) no formato CycloneDX
+      - name: 📦 Gerar SBOM (Software Bill of Materials)
+        working-directory: ${{ github.event.inputs.project_dir }}
+        run: mvn -B cyclonedx:makeAggregateBom --no-transfer-progress
+
+      # publica os arquivos SBOM como artefatos do workflow
+      - name: 📤 Subir arquivos do SBOM para o workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: |
+            ${{ github.event.inputs.project_dir }}/target/bom.xml
+            ${{ github.event.inputs.project_dir }}/target/bom.json
+            ${{ github.event.inputs.project_dir }}/target/*-cyclonedx.xml
+            ${{ github.event.inputs.project_dir }}/target/*-cyclonedx.json
+          if-no-files-found: error
+          overwrite: true
+
+      # envia snapshot de dependências Maven para o gráfico do GitHub/Dependabot
+      - name: 📊 Enviar snapshot de dependências para Dependabot/Graph
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+        uses: advanced-security/maven-dependency-submission-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  cd:
+    name: 🚀 CD → Entrega Contínua (GH Packages, GHCR, DockerHub)
+    runs-on: ubuntu-latest
+    needs: ci
+    if: ${{ github.event_name != 'pull_request' }}  # só roda fora de PR
+    permissions:
+      contents: write
+      packages: write
+    steps:
+  
+      # cada job precisa do checkout novamente
+      - name: 📥 Checkout do repositório
+        uses: actions/checkout@v4
+
+      # configura JDK 21 (Temurin) e habilita cache do Maven
+      - name: ⚙️ Configurar JDK 24 + cache Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: maven
+          check-latest: true
+
+      - name: Verificar Versão Java | Maven
+        run: |
+          java -version
+          mvn -v                    
+
+      # ----------------------------------------------------------
+      # 🚢 PUBLICAR ARTEFATO NO GitHub Packages (Maven)
+      # ----------------------------------------------------------        
+      - name: 🔐 Configurar credenciais Maven (settings.xml)
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<'XML'
+          <settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+            </servers>
+          </settings>
+          XML
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔎 Verificar se settings.xml foi criado
+        run: |
+          ls -la ~/.m2
+          test -f ~/.m2/settings.xml || (echo "ERRO: ~/.m2/settings.xml não existe" && exit 1)
+
+      - name: 🐈‍⬛ Deploy no GitHub Packages (Maven Repository)
+        working-directory: ${{ github.event.inputs.project_dir }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_REPO="${{ github.repository }}"
+          mvn -B -V -s ~/.m2/settings.xml \
+            -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/${OWNER_REPO} \
+            deploy
