@@ -44,23 +44,58 @@ O projeto **UTIL** é um módulo de **funcionalidades reutilizáveis**, desenvol
 
 ```xml
 <distributionManagement>
-  <repository>
-    <id>github</id>
-    <url>https://maven.pkg.github.com/ramiralvesmelo/SEU_REPOSITORIO</url>
-  </repository>
+  <repositories>
+    <repository>
+      <id>github-ramir-util</id>
+      <url>https://maven.pkg.github.com/ramiralvesmelo/util</url>
+    </repository>
+  </repositories>
 </distributionManagement>
 ```
 
 ### 2 Configurar credenciais no `~/.m2/settings.xml`
 
 ```xml
-<servers>
-  <server>
-    <id>github</id>
-    <username>SEU_USUARIO</username>
-    <password>${GITHUB_TOKEN}</password>
-  </server>
-</servers>
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <!-- Perfis -->
+  <profiles>
+    <profile>
+      <id>github</id>
+      <repositories>
+        <repository>
+          <id>github-ramir-util</id>
+          <url>https://maven.pkg.github.com/ramiralvesmelo/util</url>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+    </profile>
+  </profiles>
+
+  <!-- Ativar perfil por padrão -->
+  <activeProfiles>
+    <activeProfile>github</activeProfile>
+  </activeProfiles>
+
+  <!-- Credenciais -->
+  <servers>
+    <server>
+      <id>github-ramir-util</id>
+      <username>ramiralvesmelo</username>
+      <password>SEU_PERSONAL_ACCESS_TOKEN</password>
+    </server>
+  </servers>
+
+</settings>
+
 ```
 
 ### 3 Fazer o deploy
@@ -76,8 +111,8 @@ Adicione o repositório:
 ```xml
 <repositories>
   <repository>
-    <id>github</id>
-    <url>https://maven.pkg.github.com/SEU_USUARIO/SEU_REPOSITORIO</url>
+    <id>github-ramir-util</id>
+    <url>https://maven.pkg.github.com/ramiralvesmelo/util</url>
   </repository>
 </repositories>
 ```

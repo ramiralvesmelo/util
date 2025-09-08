@@ -18,16 +18,17 @@
 
 	<name>util</name>
 	<url>http://maven.apache.org</url>
+	<description>Biblioteca utilitária com classes reutilizáveis</description>
 
 	<properties>
-		<java.version>21</java.version>						
+		<java.version>21</java.version>
 		<maven.compiler.source>${java.version}</maven.compiler.source>
-		<maven.compiler.target>${java.version}</maven.compiler.target>		
+		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<!-- COMENTAR AO SUBIR PRO GITHUB, SOMENTE PARA TESTE UNITÁRIO LOCAL-->
+		<!-- COMENTAR AO SUBIR PRO GITHUB, SOMENTE PARA TESTE UNITÁRIO LOCAL
 		<jacocoArgLine></jacocoArgLine>
-		 
+		 -->
 		<jvm.add-opens>
 			--add-opens java.base/java.lang=ALL-UNNAMED
 			--add-opens java.base/java.util=ALL-UNNAMED
@@ -81,6 +82,22 @@
 		</dependency>
 
 	</dependencies>
+
+	<!-- Repositório para consumir -->
+	<repositories>
+		<repository>
+			<id>github-ramir-util</id>
+			<url>https://maven.pkg.github.com/ramiralvesmelo/util</url>
+		</repository>
+	</repositories>
+
+	<!-- Configuração para publicar -->
+	<distributionManagement>
+		<repository>
+			<id>github-ramir-util</id>
+			<url>https://maven.pkg.github.com/ramiralvesmelo/util</url>
+		</repository>
+	</distributionManagement>
 
 	<build>
 		<plugins>
@@ -174,6 +191,13 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+
+			<!-- Deploy -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>3.1.1</version>
 			</plugin>
 		</plugins>
 	</build>
