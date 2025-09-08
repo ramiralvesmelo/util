@@ -19,17 +19,39 @@
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 
 
-O projeto **UTIL** é um módulo de **funcionalidades reutilizáveis**, desenvolvido em **Java 21** (compatível com **Java 24**) e baseado no **Spring Boot 3.3.5**. Ele concentra um conjunto de **classes utilitárias** aplicáveis em diferentes projetos, com o propósito de **centralizar funcionalidades comuns**, **evitar duplicação de código** e **promover boas práticas de desenvolvimento**.
+Biblioteca Java com classes utilitárias reutilizáveis, ideal para aplicativos em **Spring Boot**, ou projetos Java genéricos.
 
+> Centraliza funcionalidades comuns, evitando duplicações de código e promovendo boas práticas de desenvolvimento.
 
 ---
 
-## 🚀 Benefícios
+## Visão Geral
 
-* Código **padronizado** e fácil de integrar em projetos Spring Boot ou Java puro
-* **Reutilização** de lógica em múltiplos módulos
-* **Redução de duplicação** e aumento de manutenibilidade
-* Preparado para uso em ambientes **corporativos** com autenticação via Keycloak
+O **util** oferece um conjunto de classes utilitárias para simplificar tarefas comuns, como:
+
+- Formatação de datas, números ou textos  
+- Manipulação de arquivos ou recursos  
+- Validações frequentes (strings vazias, números nulos, etc.)  
+- Outros helpers configuráveis
+
+Ideal para projetos onde você quer manter um padrão, reduzir código repetido e facilitar manutenção.
+
+---
+
+## Funcionalidades
+
+- Simplicidade e reutilização de lógica comum  
+- Alta flexibilidade e adaptabilidade  
+- Projetado para integração com **Spring Boot**, **Spring Security** e demais stacks Java corporativas  
+- Java 21, Spring Boot ≥ 3.3.x compatível
+
+---
+
+## Requisitos
+
+- Java 21 ou superior  
+- Maven 3.8.x ou superior  
+- (Opcional) Spring Boot 3.3.x, se usar recursos do ecossistema Spring
 
 ---
 
