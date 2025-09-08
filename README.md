@@ -9,16 +9,18 @@
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 
 [![Java](https://img.shields.io/badge/Java-21-blue.svg?logo=java)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-brightgreen.svg?logo=springboot)](https://spring.io/projects/spring-boot)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 
+O projeto **UTIL** é um módulo de **funcionalidades reutilizáveis**, desenvolvido em **Java 21** (compatível com **Java 24**) e baseado no **Spring Boot 3.3.5**. Ele concentra um conjunto de **classes utilitárias** aplicáveis em diferentes projetos, com o propósito de **centralizar funcionalidades comuns**, **evitar duplicação de código** e **promover boas práticas de desenvolvimento**.
 
-O **util** é um módulo Java que reúne um conjunto de **classes utilitárias** reutilizáveis em diferentes projetos.
-Seu objetivo é centralizar funcionalidades comuns, evitando duplicação de código e promovendo boas práticas de desenvolvimento.
 
 ---
 
@@ -40,7 +42,7 @@ Seu objetivo é centralizar funcionalidades comuns, evitando duplicação de có
 <distributionManagement>
   <repository>
     <id>github</id>
-    <url>https://maven.pkg.github.com/SEU_USUARIO/SEU_REPOSITORIO</url>
+    <url>https://maven.pkg.github.com/ramiralvesmelo/SEU_REPOSITORIO</url>
   </repository>
 </distributionManagement>
 ```
