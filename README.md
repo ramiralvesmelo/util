@@ -5,14 +5,18 @@
 [![GitHub Release](https://img.shields.io/github/v/release/ramiralvesmelo/util?logo=github)](https://github.com/ramiralvesmelo/util/releases)
 [![Coverage Status](https://img.shields.io/codecov/c/github/ramiralvesmelo/util?logo=codecov)](https://app.codecov.io/gh/ramiralvesmelo/util)
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_ramiralvesmelo_util&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ramiralvesmelo_util&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ramiralvesmelo_util)
 
 
 [![Java](https://img.shields.io/badge/Java-21-blue.svg?logo=java)](https://adoptium.net/)
