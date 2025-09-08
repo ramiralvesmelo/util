@@ -49,7 +49,7 @@ O projeto **UTIL** é um módulo de **funcionalidades reutilizáveis**, desenvol
 </distributionManagement>
 ```
 
-### 2 Configurar credenciais no `~/.m2/settings.xml`
+### 2 Configurar credenciais no `~/.m2/settings.xml` ou `%USERPROFILE%\.m2\settings.xml`
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
