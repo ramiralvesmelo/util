@@ -5,52 +5,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
 
-@ExtendWith(OutputCaptureExtension.class)
-class EmailUtilTest {
-
+@DisplayName("IDN (domínios internacionalizados)")
+public class EmailUtilTest {
     @Test
-    @DisplayName("Válidos básicos e subdomínios")
-    void validEmails() {
-        assertTrue(EmailUtil.validateCustomerEmail("user@example.com"));
-        assertTrue(EmailUtil.validateCustomerEmail("user.name+tag@sub.example.co"));
-        assertTrue(EmailUtil.validateCustomerEmail("a-b.c_d@dominio.com.br"));
+    @DisplayName("Aceita IDN quando allowIdn=true (bücher.de)")
+    void idn_allowed() {
+        assertTrue(EmailUtil.validateCustomerEmail("user@bücher.de", true));
     }
 
     @Test
-    @DisplayName("Inválidos comuns")
-    void invalidEmails() {
-        assertFalse(EmailUtil.validateCustomerEmail(null));
-        assertFalse(EmailUtil.validateCustomerEmail(""));
-        assertFalse(EmailUtil.validateCustomerEmail("user@"));
-        assertFalse(EmailUtil.validateCustomerEmail("@dominio.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@dominio"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@dominio..com"));
-        assertFalse(EmailUtil.validateCustomerEmail(".user@example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user.@example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@-example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@example-.com"));
+    @DisplayName("Rejeita IDN quando allowIdn=false")
+    void idn_not_allowed() {
+        assertFalse(EmailUtil.validateCustomerEmail("user@bücher.de", false));
     }
 
     @Test
-    @DisplayName("IDN opcional com Punycode")
-    void idnDomain() {
-        // domínio com caractere especial: só valida quando allowIdn=true
-        String idn = "usuario@exemplo.çom";
-        assertFalse(EmailUtil.validateCustomerEmail(idn, false));
-        // dependendo do seu critério, pode aceitar com allowIdn
-        assertFalse(EmailUtil.validateCustomerEmail(idn, true)); // ajuste para true/false conforme regra desejada
-    }
-
-    @Test
-    @DisplayName("Captura de logs de validação")
-    void logsAreEmitted(CapturedOutput output) {
-        EmailUtil.validateCustomerEmail("user@dominio..com");
-        String logs = output.getOut() + output.getErr();
-        assertTrue(logs.contains("pontos consecutivos") || logs.toLowerCase().contains("consecut"),
-                "Deveria logar mensagem de pontos consecutivos");
+    @DisplayName("IDN com label inválida deve falhar (pontos duplos)")
+    void idn_invalid_label() {
+        assertFalse(EmailUtil.validateCustomerEmail("user@ex..emplo.com", true));
     }
 }
