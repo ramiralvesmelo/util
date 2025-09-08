@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 @DisplayName("IDN (domínios internacionalizados)")
-public class EmailUtilTest {
+class EmailUtilTest {
     @Test
     @DisplayName("Aceita IDN quando allowIdn=true (bücher.de)")
     void idn_allowed() {

@@ -1,4 +1,0 @@
-br\com\ramiralvesmelo\util\exception\BusinessException.class
-br\com\ramiralvesmelo\util\number\OrderNumberUtil.class
-br\com\ramiralvesmelo\util\security\KeycloakRoleConverter.class
-br\com\ramiralvesmelo\util\email\EmailUtil.class

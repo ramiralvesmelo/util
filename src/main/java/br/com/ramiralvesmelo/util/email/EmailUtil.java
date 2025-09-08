@@ -65,7 +65,7 @@ public final class EmailUtil {
             try {
                 domain = IDN.toASCII(domain);
             } catch (IllegalArgumentException ex) {
-                log.error("Erro ao converter domínio IDN: {}", domain, ex);
+                log.trace("Erro ao converter domínio IDN: {}", domain, ex);
                 return false;
             }
         }
