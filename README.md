@@ -100,7 +100,7 @@ Ideal para projetos onde você quer manter um padrão, reduzir código repetido 
 
   <!-- Ativar perfil por padrão -->
   <activeProfiles>
-    <activeProfile>github</activeProfile>
+    <activeProfile>github-ramir-util</activeProfile>
   </activeProfiles>
 
   <!-- Credenciais -->
