@@ -13,7 +13,7 @@
 
 	<groupId>br.com.ramiralvesmelo</groupId>
 	<artifactId>util</artifactId>
-	<version>1.1.0</version>
+	<version>1.2.0</version>
 	<packaging>jar</packaging>
 
 	<name>util</name>
@@ -90,6 +90,12 @@
 			<version>1.18.34</version> <!-- versão estável mais recente -->
 			<scope>provided</scope>
 		</dependency>
+
+		<!-- Jackson Databind -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>		
 
 	</dependencies>
 
