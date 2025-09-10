@@ -26,9 +26,9 @@
 		<maven.compiler.target>${java.version}</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<!-- COMENTAR AO SUBIR PRO GITHUB, SOMENTE PARA TESTE UNITÁRIO LOCAL -->
+		<!-- COMENTAR AO SUBIR PRO GITHUB, SOMENTE PARA TESTE UNITÁRIO LOCAL
 		<jacocoArgLine></jacocoArgLine>
-
+		 -->
 		<jvm.add-opens>
 			--add-opens java.base/java.lang=ALL-UNNAMED
 			--add-opens java.base/java.util=ALL-UNNAMED
