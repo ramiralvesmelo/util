@@ -28,7 +28,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<!-- COMENTAR AO SUBIR PRO GITHUB, SOMENTE PARA TESTE UNITÁRIO LOCAL -->
 		<jacocoArgLine></jacocoArgLine>
-		
+
 		<jvm.add-opens>
 			--add-opens java.base/java.lang=ALL-UNNAMED
 			--add-opens java.base/java.util=ALL-UNNAMED
@@ -40,6 +40,13 @@
 		</jvm.add-opens>
 	</properties>
 	<dependencies>
+
+		<!-- H2 só para testes -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -58,6 +65,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 
 		<!-- Resource Server (JWT via OIDC/Keycloak) -->
