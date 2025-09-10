@@ -36,10 +36,18 @@ class BaseRepositoryImplDataJpaTest {
 
     // existsById
     assertThat(repo.existsById(e.getId())).isTrue();
-
+       
     // deleteById
     repo.deleteById(e.getId());
     assertThat(repo.existsById(e.getId())).isFalse();
     assertThat(repo.count()).isZero();
+
+    // delete
+    e = new SampleEntity("Alice");
+    e = repo.save(e);       
+    repo.delete(e);
+    assertThat(repo.existsById(e.getId())).isFalse();
+    assertThat(repo.count()).isZero();
+
   }
 }

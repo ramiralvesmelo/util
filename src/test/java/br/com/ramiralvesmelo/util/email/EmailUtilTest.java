@@ -149,6 +149,14 @@ class EmailUtilTest {
 		String tooLong = repeat('a', 64);
 		String email = "x@" + tooLong + ".com";
 		assertFalse(EmailUtil.validateCustomerEmail(email));
-	}    
+	}
+	
+	@Test
+	@DisplayName("O dominho deve conter o provedor e dominio de topo. Exp.: .com")
+	void label_size_lower_2() {
+		String email = "email@gmail.";
+		assertFalse(EmailUtil.validateCustomerEmail(email));
+	}	
+
     
 }
