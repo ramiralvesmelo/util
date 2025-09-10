@@ -35,6 +35,11 @@ jobs:
       - name: 📥 Checkout do repositório
         uses: actions/checkout@v4
 
+      - name: 🧹 Remover jacocoArgLine vazio do pom.xml
+        run: |
+          sed -i 's|<jacocoArgLine></jacocoArgLine>||g' pom.xml
+          echo "✅ jacocoArgLine removido do pom.xml"        
+
       # configura JDK 21 (Temurin) e habilita cache do Maven
       - name: ⚙️ Configurar JDK 24 + cache Maven
         uses: actions/setup-java@v4
