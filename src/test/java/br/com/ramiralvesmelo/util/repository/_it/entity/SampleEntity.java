@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.repository.entity;
+package br.com.ramiralvesmelo.util.repository._it.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

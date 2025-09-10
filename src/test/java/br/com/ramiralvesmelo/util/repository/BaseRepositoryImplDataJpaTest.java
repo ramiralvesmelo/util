@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
-import br.com.ramiralvesmelo.util.repository.entity.SampleEntity;
-import br.com.ramiralvesmelo.util.repository.impl.SampleEntityRepository;
+import br.com.ramiralvesmelo.util.repository._it.entity.SampleEntity;
+import br.com.ramiralvesmelo.util.repository_it.impl.SampleEntityRepository;
 
 @DataJpaTest
 @Import(SampleEntityRepository.class)
