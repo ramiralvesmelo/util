@@ -1,98 +1,58 @@
-# ============================================
-#   PROJETO JAVA - SPRING BOOT
-# ============================================
-
-# Compilação / Build
-target/
-out/
+.gradle
 build/
-*.class
-*.war
-*.ear
-*.jar
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
 
-# Logs
-*.log
-hs_err_pid*
-
-# Sistema operacional
-.DS_Store
-Thumbs.db
-
-# ============================================
-#   MAVEN
-# ============================================
-.mvn/
-.mvn/wrapper/maven-wrapper.jar
-
-# Relatórios Maven / Testes
-/test-output/
-/surefire-reports/
-/failsafe-reports/
-
-# ============================================
-#   GRADLE (se usado)
-# ============================================
-.gradle/
-build/
-!gradle-wrapper.jar
-
-# ============================================
-#   IDEs
-# ============================================
-# Eclipse / STS
-.project
-.classpath
-.settings/
-.apt_generated/
-.springBeans
-.sts4-cache/
-
-# IntelliJ
-.idea/
+### IntelliJ IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
 *.iml
 *.ipr
-*.iws
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
-# VS Code
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
 .vscode/
 
-# ============================================
-#   JACOCO
-# ============================================
-target/site/jacoco/
-target/jacoco.exec
-jacoco.exec
+### Mac OS ###
+.DS_Store
+/bugs-technical-details.md
+/target/
 
-# ============================================
-#   DOCKER / INFRA
-# ============================================
-# Volumes e dados persistentes
-infra/postgres/data/
-infra/redis/data/
-infra/kafka/data/
+### Docker ###
+# POSTGRES
+/infra/docker/data/postgres/** 
+
+### KeyCloak ###
 infra/keycloak/data/
-infra/keycloak/realms/
+infra/keycloak/realms/h2/
+infra/keycloak/realms/import/
+infra/keycloak/realms/transaction-logs/
+!infra/keycloak/realms/*.json
 
-# Arquivos temporários Docker
-*.pid
-*.seed
-*.bak
-*.tmp
-*.orig
-
-# ============================================
-#   AMBIENTE LOCAL
-# ============================================
-.env
-*.local
-*.properties.local
-*.yml.local
-
-# ============================================
-#   OUTROS
-# ============================================
-*.swp
-*.tmp
-*.bak
-*.orig
+### MongoDB ###
+infra/mongodb/**
