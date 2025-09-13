@@ -90,4 +90,33 @@ class EmailUtilTest {
         assertTrue(EmailUtil.validateCustomerEmail("a@example.COM"));
         assertTrue(EmailUtil.validateCustomerEmail("Z9@example-domain.com"));
     }
+    
+    @Test
+    void deveCobrirCatchIdn_comSurrogateAltoIsolado() {
+        // \uD800 = high surrogate isolado -> IDN.toASCII lança IllegalArgumentException
+        assertFalse(EmailUtil.validateCustomerEmail("user@\uD800.com", true));
+    }
+
+    @Test
+    void deveCobrirCatchIdn_comSurrogateBaixoIsolado() {
+        // \uDC00 = low surrogate isolado -> também dispara IllegalArgumentException
+        assertFalse(EmailUtil.validateCustomerEmail("user@\uDC00.com", true));
+    }
+    
+    @Test
+    void deveCobrirAsciiLettersDigits() {
+        // 'A' -> letra maiúscula (c >= 'A' && c <= 'Z')
+        assertTrue(EmailUtil.validateCustomerEmail("A@example.com"));
+
+        // 'z' -> letra minúscula (c >= 'a' && c <= 'z')
+        assertTrue(EmailUtil.validateCustomerEmail("z@example.com"));
+
+        // '0' -> dígito numérico (c >= '0' && c <= '9')
+        assertTrue(EmailUtil.validateCustomerEmail("user0@example.com"));
+
+        // caractere inválido '@' no local-part -> cai no else do método
+        assertFalse(EmailUtil.validateCustomerEmail("user!@example.com"));
+    }
+    
+    
 }
