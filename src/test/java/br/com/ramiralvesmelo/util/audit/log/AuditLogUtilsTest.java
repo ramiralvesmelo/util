@@ -3,6 +3,8 @@ package br.com.ramiralvesmelo.util.audit.log;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
@@ -78,4 +80,22 @@ class AuditLogUtilsTest {
         assertThrows(IllegalArgumentException.class,
             () -> AuditLogUtils.sendAsAuditLog(service, null));
     }
+    
+    
+    @Test
+    @DisplayName("Deve logar erro quando service.send lançar exceção")
+    void shouldLogErrorWhenServiceThrows() {
+        Map<String, Object> source = Map.of("id", 99L);
+
+        // Força o mock a lançar RuntimeException quando service.send for chamado
+        RuntimeException boom = new RuntimeException("falha no envio");
+        doThrow(boom).when(service).send(any(AuditLogEvent.class));
+
+        // Executa o método (não deve propagar a exceção)
+        AuditLogUtils.sendAsAuditLog(service, source);
+
+        // Verifica que tentou enviar uma vez
+        verify(service).send(any(AuditLogEvent.class));
+    }
+    
 }
