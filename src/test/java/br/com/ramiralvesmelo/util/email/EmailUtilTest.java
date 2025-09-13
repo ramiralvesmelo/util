@@ -117,6 +117,64 @@ class EmailUtilTest {
         // caractere inválido '@' no local-part -> cai no else do método
         assertFalse(EmailUtil.validateCustomerEmail("user!@example.com"));
     }
-    
+
+    // ---------- AUXILIARES ----------
+    private static String label(int n) {
+        return repeat('a', n);
+    }
+
+    // Monta domínio com 3 labels de 63 e 1 de 61 (total = 63*3 + 61 + 3 pontos = 253)
+    private static String domainLen253() {
+        return label(63) + "." + label(63) + "." + label(63) + "." + label(61);
+    }
+
+    // ---------- NOVOS TESTES ----------
+
+    @Test
+    void deveRejeitarDominioCurtoDemais() {
+        // domain.length() = 1
+        assertFalse(EmailUtil.validateCustomerEmail("x@a"));
+        // domain.length() = 2
+        assertFalse(EmailUtil.validateCustomerEmail("x@ab"));
+    }
+
+    @Test
+    void deveAceitarLimitesExatos() {
+        // local exatamente 64
+        String local64 = repeat('a', 64);
+        assertTrue(EmailUtil.validateCustomerEmail(local64 + "@example.com"));
+
+        // domínio exatamente 253
+        String dom253 = domainLen253();
+        assertTrue(dom253.length() == 253);
+        assertTrue(EmailUtil.validateCustomerEmail("user@" + dom253));
+    }
+
+    @Test
+    void deveRejeitarLabelDeDominioCom64Chars() {
+        // um label com 64 (inválido), ainda que TLD e total estejam ok
+        String dom = label(64) + ".com";
+        assertFalse(EmailUtil.validateCustomerEmail("user@" + dom));
+    }
+
+    @Test
+    void deveRejeitarCaracteresNaoAsciiLetterDigitNoDominio() {
+        // força caminho onde o char não é [A-Za-z0-9] nem '-'
+        assertFalse(EmailUtil.validateCustomerEmail("user@exa`mple.com")); // crase
+        assertFalse(EmailUtil.validateCustomerEmail("user@exam[ple.com")); // '['
+        assertFalse(EmailUtil.validateCustomerEmail("user@exam]ple.com")); // ']'
+        assertFalse(EmailUtil.validateCustomerEmail("user@exam/ple.com")); // '/'
+        assertFalse(EmailUtil.validateCustomerEmail("user@exam:ple.com")); // ':'
+    }
+
+    @Test
+    void deveCobrirIdnPunycodeValidoEEmojiInvalidoNoLocal() {
+        // domínio IDN válido via punycode (equivale a müller.de)
+        assertTrue(EmailUtil.validateCustomerEmail("usuario@xn--mller-kva.de", true));
+
+        // emoji no local-part (não ASCII permitido pela sua regra)
+        assertFalse(EmailUtil.validateCustomerEmail("us\uD83D\uDE00er@example.com"));
+    }
+
     
 }
