@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.1.0 http://maven.apache.org/xsd/settings-1.1.0.xsd">
+	<!-- Plugins extras que você deseja usar -->
+	<pluginGroups>
+		<pluginGroup>org.sonarsource.scanner.maven</pluginGroup>
+	</pluginGroups>
+	<profiles>
+		<profile>
+			<id>maven-central</id>
+			<repositories>
+				<repository>
+					<id>central</id>
+					<name>Maven Central Repository</name>
+					<url>https://repo1.maven.org/maven2</url>
+					<releases>
+						<enabled>true</enabled>
+					</releases>
+					<snapshots>
+						<enabled>false</enabled>
+					</snapshots>
+				</repository>
+			</repositories>
+			<pluginRepositories>
+				<pluginRepository>
+					<id>central</id>
+					<name>Maven Central Plugins</name>
+					<url>https://repo1.maven.org/maven2</url>
+					<releases>
+						<enabled>true</enabled>
+					</releases>
+					<snapshots>
+						<enabled>false</enabled>
+					</snapshots>
+				</pluginRepository>
+			</pluginRepositories>
+		</profile>
+		<profile>
+			<id>github-ramir-util</id>
+			<repositories>
+				<repository>
+					<id>github-ramir-util</id>
+					<url>https://maven.pkg.github.com/ramiralvesmelo/util</url>
+					<releases>
+						<enabled>true</enabled>
+					</releases>
+					<snapshots>
+						<enabled>true</enabled>
+					</snapshots>
+				</repository>
+			</repositories>
+			<pluginRepositories>
+				<pluginRepository>
+					<id>github-ramir-util</id>
+					<url>https://maven.pkg.github.com/ramiralvesmelo/util</url>
+					<releases>
+						<enabled>true</enabled>
+					</releases>
+					<snapshots>
+						<enabled>true</enabled>
+					</snapshots>
+				</pluginRepository>
+			</pluginRepositories>
+		</profile>
+	</profiles>
+	<activeProfiles>
+		<activeProfile>maven-central</activeProfile>
+		<activeProfile>github-ramir-util</activeProfile>
+	</activeProfiles>
+	<servers>		
+		<server>
+			<id>github-ramir-util</id>
+			<username>ramiralvesmelo</username>
+			<password>[GIT_TOKEN_PAT]</password>
+		</server>
+	</servers>	
+</settings>

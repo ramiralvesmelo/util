@@ -1,0 +1,189 @@
+name: Executar GitAction
+
+on:
+  # Execução manual com parâmetros
+  workflow_dispatch:
+    inputs:
+      project_dir:
+        description: "Diretório do projeto (raiz do Maven)"
+        required: true
+        default: "."
+      module_gav:
+        description: "GAV alvo (GroupId:ArtifactId[:Packaging]:Version) para build parcial"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+
+# 🌍 Variáveis de ambiente GLOBAIS (válidas para todos os jobs/steps)
+env:
+  PROJECT_NAME: "util"
+  JAVA_VERSION: "24"
+  MAVEN_DISTRIBUTION: "temurin"
+
+  # Docker/Registry (caso futuramente publique imagem)
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKER_PLATFORMS: linux/amd64
+
+  # Qualidade
+  SONAR_HOST_URL: "https://sonarcloud.io"
+  SONAR_ORG: "ramiralvesmelo"
+  SONAR_PROJECT_KEY: "ramiralvesmelo_util"
+  JACOCO_REPORT_GLOB: "**/target/site/jacoco/jacoco.xml"
+
+jobs:
+
+  ci:
+    name: "🔍 CI → Build, Testes, Cobertura e Qualidade"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: "📥 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "🧹 Remover jacocoArgLine vazio do pom.xml"
+        run: |
+          sed -i 's|<jacocoArgLine></jacocoArgLine>||g' pom.xml || true
+          echo "✅ jacocoArgLine removido (se existia)."
+
+      - name: "⚙️ JDK ${{
+          env.JAVA_VERSION }} + cache Maven"
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.MAVEN_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+          check-latest: true
+
+      - name: "🔎 Versões Java/Maven"
+        run: |
+          java -version
+          mvn -v
+
+      - name: "🛠️ Build + Test + Coverage (JaCoCo)"
+        working-directory: ${{ github.event.inputs.project_dir }}
+        run: |
+          set -e
+          if [ -n "${{ github.event.inputs.module_gav }}" ]; then
+            mvn -B -V -DskipTests=false clean verify -am -pl "${{ github.event.inputs.module_gav }}"
+          else
+            mvn -B -V -DskipTests=false clean verify
+          fi
+
+          if find . -type f -path "${{ env.JACOCO_REPORT_GLOB }}" -print -quit >/dev/null; then
+            echo "✅ Relatório jacoco.xml localizado."
+          else
+            echo "❌ ERRO: Relatório jacoco.xml não encontrado em ${{ env.JACOCO_REPORT_GLOB }}."
+            exit 1
+          fi
+
+      - name: "📈 Codecov — Enviar cobertura"
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}           # obrigatório p/ repo privado
+          files: ${{ env.JACOCO_REPORT_GLOB }}
+          slug: ${{ github.repository }}
+          fail_ci_if_error: true
+          verbose: false
+
+      - name: "🔎 SonarCloud — Análise e Quality Gate"
+        working-directory: ${{ github.event.inputs.project_dir }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          mvn -B -V \
+            -Dsonar.host.url="${{ env.SONAR_HOST_URL }}" \
+            -Dsonar.login="${SONAR_TOKEN}" \
+            -Dsonar.organization="${{ env.SONAR_ORG }}" \
+            -Dsonar.projectKey="${{ env.SONAR_PROJECT_KEY }}" \
+            -Dsonar.coverage.jacoco.xmlReportPaths="${{ env.JACOCO_REPORT_GLOB }}" \
+            -Dsonar.qualitygate.wait=true \
+            org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+
+      - name: "📦 SBOM — CycloneDX (aggregate)"
+        working-directory: ${{ github.event.inputs.project_dir }}
+        run: mvn -B cyclonedx:makeAggregateBom --no-transfer-progress
+
+      - name: "📤 Upload SBOM como artefato"
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: |
+            ${{ github.event.inputs.project_dir }}/target/bom.xml
+            ${{ github.event.inputs.project_dir }}/target/bom.json
+            ${{ github.event.inputs.project_dir }}/target/*-cyclonedx.xml
+            ${{ github.event.inputs.project_dir }}/target/*-cyclonedx.json
+          if-no-files-found: error
+          overwrite: true
+
+      - name: "📊 Dependabot/Dependency Graph — Snapshot Maven"
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+        uses: advanced-security/maven-dependency-submission-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  cd:
+    name: "🚀 CD → Deploy no GitHub Packages (Maven)"
+    runs-on: ubuntu-latest
+    needs: ci
+    if: ${{ github.event_name != 'pull_request' }}
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: "📥 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "⚙️ JDK ${{
+          env.JAVA_VERSION }} + cache Maven"
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.MAVEN_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+          check-latest: true
+
+      - name: "🔎 Versões Java/Maven"
+        run: |
+          java -version
+          mvn -v
+
+      - name: "🔐 Configurar ~/.m2/settings.xml (GitHub Packages)"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<'XML'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.1.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.1.0 http://maven.apache.org/xsd/settings-1.1.0.xsd">
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${env.GITHUB_ACTOR}</username>
+                <password>${env.GITHUB_TOKEN}</password>
+              </server>
+            </servers>
+          </settings>
+          XML
+          ls -la ~/.m2
+          test -f ~/.m2/settings.xml
+
+      - name: "🐈‍⬛ Deploy no GitHub Packages (Maven Repo)"
+        working-directory: ${{ github.event.inputs.project_dir }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER_REPO="${{ github.repository }}"
+          mvn -B -V -s ~/.m2/settings.xml \
+            -DaltDeploymentRepository=github::default::https://maven.pkg.github.com/${OWNER_REPO} \
+            deploy
