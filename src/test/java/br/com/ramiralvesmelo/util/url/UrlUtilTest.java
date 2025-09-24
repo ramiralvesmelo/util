@@ -12,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import br.com.ramiralvesmelo.util.exception.IntegrationException;
+import br.com.ramiralvesmelo.util.exception.UrlException;
 
 class UrlUtilTest {
 
@@ -54,11 +54,11 @@ class UrlUtilTest {
     }
 
     @Test
-    @DisplayName("Deve lançar IntegrationException quando baseUrl é inválida (URISyntaxException)")
+    @DisplayName("Deve lançar UrlException quando baseUrl é inválida (URISyntaxException)")
     void buidlUrl_baseInvalida() {
         String invalidBase = "http://localhost:8084 app-event"; // espaço no host
         assertThatThrownBy(() -> UrlUtil.buidlUrl(invalidBase, PATH, "X.pdf"))
-            .isInstanceOf(IntegrationException.class)
+            .isInstanceOf(UrlException.class)
             .hasMessageContaining("URL inválida");
     }
 

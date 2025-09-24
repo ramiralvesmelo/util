@@ -5,7 +5,8 @@ import java.util.Map;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.ramiralvesmelo.util.message.event.AuditLogEvent;
+import br.com.ramiralvesmelo.util.shared.event.AuditLogEvent;
+import br.com.ramiralvesmelo.util.shared.interfaces.AuditLogService;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 

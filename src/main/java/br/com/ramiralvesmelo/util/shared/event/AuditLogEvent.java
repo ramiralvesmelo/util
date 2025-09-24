@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.message.event;
+package br.com.ramiralvesmelo.util.shared.event;
 
 import java.util.Map;
 

@@ -1,0 +1,57 @@
+{
+  "realm": "app-api-realm",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "app-api",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"]
+    },
+    {
+      "clientId": "app-event",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "b0f3c8a19de74b0c9a4d5e7f21a6c3b8d1e2f4a5c6d7b8a9e0f1c2d3e4f50617",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "redirectUris": [],
+      "webOrigins": []
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "ADMIN",
+        "description": "Admin role for app-api API"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "appapi",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "App",
+      "lastName": "Api",
+      "email": "appapi@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ADMIN"]
+    }
+  ]
+}

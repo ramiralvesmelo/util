@@ -1,6 +1,6 @@
-package br.com.ramiralvesmelo.util.audit.log;
+package br.com.ramiralvesmelo.util.shared.interfaces;
 
-import br.com.ramiralvesmelo.util.message.event.AuditLogEvent;
+import br.com.ramiralvesmelo.util.shared.event.AuditLogEvent;
 
 public interface AuditLogService{
 

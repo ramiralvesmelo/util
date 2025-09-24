@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.ramiralvesmelo.util.message.event.OrderFinalizedEvent;
+import br.com.ramiralvesmelo.util.shared.event.OrderFinalizedEvent;
 
 class OrderFinalizedEventTest {
 
