@@ -4,9 +4,9 @@ package br.com.ramiralvesmelo.util.security;
  * Utilitário para sanitizar strings antes de embutir em JavaScript.
  * Garante que não haja quebras ou caracteres perigosos.
  */
-public final class JsSanitizer {
+public final class JavaScriptEncoder {
 
-    private JsSanitizer() {
+    private JavaScriptEncoder() {
         // Classe utilitária → não instanciável
     }
 
@@ -16,7 +16,7 @@ public final class JsSanitizer {
      * @param value Texto a ser sanitizado (pode ser null)
      * @return String entre aspas duplas pronta para uso em JS
      */
-    public static String clean(String value) {
+    public static String escape(String value) {
         if (value == null) return "null";
 
         String sanitized = value

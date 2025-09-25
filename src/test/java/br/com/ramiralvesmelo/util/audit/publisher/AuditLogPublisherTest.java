@@ -1,5 +1,5 @@
 // 
-package br.com.ramiralvesmelo.util.audit.logging;
+package br.com.ramiralvesmelo.util.audit.publisher;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.com.ramiralvesmelo.util.commons.dto.AuditLogDto;
 
-class AuditLogEventTest {
+class AuditLogPublisherTest {
 
 	@Test
 	@DisplayName("Builder deve popular campos corretamente")
