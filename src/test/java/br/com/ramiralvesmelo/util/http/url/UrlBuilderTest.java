@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.url;
+package br.com.ramiralvesmelo.util.http.url;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -12,9 +12,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import br.com.ramiralvesmelo.util.exception.UrlException;
+import br.com.ramiralvesmelo.util.core.exception.UrlException;
+import br.com.ramiralvesmelo.util.http.url.UrlBuilder;
 
-class UrlUtilTest {
+class UrlBuilderTest {
 
     private static final String BASE = "http://localhost:8084/app-event";
     private static final String PATH = "/download/pdf/";
@@ -22,7 +23,7 @@ class UrlUtilTest {
     @Test
     @DisplayName("Deve montar URL completa a partir de base + path + orderNumber")
     void buidlUrl_ok() {
-        String result = UrlUtil.buidlUrl(BASE, PATH, "ORD-0001.pdf");
+        String result = UrlBuilder.buidlUrl(BASE, PATH, "ORD-0001.pdf");
         assertThat(result)
             .isEqualTo("http://localhost:8084/app-event/download/pdf/ORD-0001.pdf");
     }
@@ -31,7 +32,7 @@ class UrlUtilTest {
     @MethodSource("orderNumbers")
     @DisplayName("Sanitização: caracteres fora do whitelist viram '_' e demais são preservados")
     void buidlUrl_sanitize(String input, String expectedFile) {
-        String result = UrlUtil.buidlUrl(BASE, PATH, input);
+        String result = UrlBuilder.buidlUrl(BASE, PATH, input);
         assertThat(result)
             .isEqualTo("http://localhost:8084/app-event/download/pdf/" + expectedFile);
     }
@@ -48,7 +49,7 @@ class UrlUtilTest {
     @Test
     @DisplayName("Com orderNumber null, deve terminar no path sem arquivo (string vazia pós-sanitização)")
     void buidlUrl_orderNull() {
-        String result = UrlUtil.buidlUrl(BASE, PATH, null);
+        String result = UrlBuilder.buidlUrl(BASE, PATH, null);
         assertThat(result)
             .isEqualTo("http://localhost:8084/app-event/download/pdf/");
     }
@@ -57,7 +58,7 @@ class UrlUtilTest {
     @DisplayName("Deve lançar UrlException quando baseUrl é inválida (URISyntaxException)")
     void buidlUrl_baseInvalida() {
         String invalidBase = "http://localhost:8084 app-event"; // espaço no host
-        assertThatThrownBy(() -> UrlUtil.buidlUrl(invalidBase, PATH, "X.pdf"))
+        assertThatThrownBy(() -> UrlBuilder.buidlUrl(invalidBase, PATH, "X.pdf"))
             .isInstanceOf(UrlException.class)
             .hasMessageContaining("URL inválida");
     }
@@ -66,7 +67,7 @@ class UrlUtilTest {
     @DisplayName("Base com barra final preserva comportamento atual (gera //download no resultado)")
     void buidlUrl_baseComBarraFinal() {
         String baseComBarra = "http://localhost:8084/app-event/";
-        String result = UrlUtil.buidlUrl(baseComBarra, PATH, "ORD-9.pdf");
+        String result = UrlBuilder.buidlUrl(baseComBarra, PATH, "ORD-9.pdf");
         // Observação: implementação atual concatena "/app-event/" + "/download..." => "//download..."
         assertThat(result)
             .isEqualTo("http://localhost:8084/app-event//download/pdf/ORD-9.pdf");
@@ -75,9 +76,9 @@ class UrlUtilTest {
     @Test
     @DisplayName("Cobertura do construtor privado via reflexão")
     void constructor_privateCoverage() throws Exception {
-        Constructor<UrlUtil> c = UrlUtil.class.getDeclaredConstructor();
+        Constructor<UrlBuilder> c = UrlBuilder.class.getDeclaredConstructor();
         c.setAccessible(true);
-        UrlUtil instance = c.newInstance();
+        UrlBuilder instance = c.newInstance();
         assertThat(instance).isNotNull();
     }
 }

@@ -1,6 +1,6 @@
-package br.com.ramiralvesmelo.util.shared.interfaces;
+package br.com.ramiralvesmelo.util.commons.interfaces;
 
-import br.com.ramiralvesmelo.util.shared.dto.AuditLogDto;
+import br.com.ramiralvesmelo.util.commons.dto.AuditLogDto;
 
 public interface AuditLogService{
 

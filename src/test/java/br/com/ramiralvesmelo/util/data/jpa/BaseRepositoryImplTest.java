@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.repository;
+package br.com.ramiralvesmelo.util.data.jpa;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,6 +19,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import br.com.ramiralvesmelo.util.data.jpa.BaseRepository;
+import br.com.ramiralvesmelo.util.data.jpa.BaseRepositoryImpl;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;

@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.io;
+package br.com.ramiralvesmelo.util.http.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,7 +20,8 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import br.com.ramiralvesmelo.util.exception.IntegrationException;
+import br.com.ramiralvesmelo.util.core.exception.IntegrationException;
+import br.com.ramiralvesmelo.util.http.file.FileResponseWriter;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.WriteListener;
 import jakarta.servlet.http.HttpServletResponse;
@@ -45,7 +46,7 @@ class FileResponseUtilTest {
 
         byte[] data = "conteudo".getBytes(StandardCharsets.UTF_8);
 
-        FileResponseUtil.writeBytesToResponse(resp, data, "relatorio.pdf", "application/pdf");
+        FileResponseWriter.writeBytesToResponse(resp, data, "relatorio.pdf", "application/pdf");
 
         // Content-Type e Content-Disposition corretos
         verify(resp).setContentType("application/pdf");
@@ -71,7 +72,7 @@ class FileResponseUtilTest {
 
         byte[] data = "abc".getBytes(StandardCharsets.UTF_8);
 
-        FileResponseUtil.writeBytesToResponse(resp, data, "file.txt", null);
+        FileResponseWriter.writeBytesToResponse(resp, data, "file.txt", null);
 
         verify(resp).setContentType("application/octet-stream");
         verify(resp).setContentLengthLong(data.length);
@@ -93,7 +94,7 @@ class FileResponseUtilTest {
         String safeName = rawName.replaceAll("[\\r\\n]+", " ").replace("\"", "'");
         String encodedName = java.net.URLEncoder.encode(safeName, StandardCharsets.UTF_8);
 
-        FileResponseUtil.writeBytesToResponse(resp, data, rawName, "text/plain");
+        FileResponseWriter.writeBytesToResponse(resp, data, rawName, "text/plain");
 
         verify(resp).setHeader(eq("Content-Disposition"),
                 argThat(h -> h.startsWith("attachment;")
@@ -108,7 +109,7 @@ class FileResponseUtilTest {
     void write_emptyData_returns204() throws Exception {
         HttpServletResponse resp = mock(HttpServletResponse.class);
 
-        FileResponseUtil.writeBytesToResponse(resp, new byte[0], "x.pdf", "application/pdf");
+        FileResponseWriter.writeBytesToResponse(resp, new byte[0], "x.pdf", "application/pdf");
 
         verify(resp).sendError(HttpServletResponse.SC_NO_CONTENT, "Arquivo vazio");
         verify(resp, never()).getOutputStream();
@@ -121,7 +122,7 @@ class FileResponseUtilTest {
     void write_invalidName_returns400() throws Exception {
         HttpServletResponse resp = mock(HttpServletResponse.class);
 
-        FileResponseUtil.writeBytesToResponse(resp, "abc".getBytes(StandardCharsets.UTF_8), "   ", "application/pdf");
+        FileResponseWriter.writeBytesToResponse(resp, "abc".getBytes(StandardCharsets.UTF_8), "   ", "application/pdf");
 
         verify(resp).sendError(HttpServletResponse.SC_BAD_REQUEST, "Nome do arquivo inválido");
         verify(resp, never()).getOutputStream();
@@ -142,7 +143,7 @@ class FileResponseUtilTest {
             .when(resp).setHeader(eq("Content-Disposition"), anyString());
 
         assertThatThrownBy(() ->
-                FileResponseUtil.writeBytesToResponse(resp, "abc".getBytes(StandardCharsets.UTF_8), "x.pdf", "application/pdf"))
+                FileResponseWriter.writeBytesToResponse(resp, "abc".getBytes(StandardCharsets.UTF_8), "x.pdf", "application/pdf"))
             .isInstanceOf(IntegrationException.class)
             .hasMessageContaining("Erro inesperado ao enviar arquivo: x.pdf");
 

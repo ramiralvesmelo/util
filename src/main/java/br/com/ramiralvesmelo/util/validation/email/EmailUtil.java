@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.email;
+package br.com.ramiralvesmelo.util.validation.email;
 
 import java.net.IDN;
 import java.util.regex.Pattern;

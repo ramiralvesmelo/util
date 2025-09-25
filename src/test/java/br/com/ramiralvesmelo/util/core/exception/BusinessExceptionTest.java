@@ -1,10 +1,12 @@
-package br.com.ramiralvesmelo.util.exception;
+package br.com.ramiralvesmelo.util.core.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+
+import br.com.ramiralvesmelo.util.core.exception.BusinessException;
 
 class BusinessExceptionTest {
 

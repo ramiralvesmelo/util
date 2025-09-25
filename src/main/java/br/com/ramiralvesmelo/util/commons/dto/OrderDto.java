@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.shared.dto;
+package br.com.ramiralvesmelo.util.commons.dto;
 
 import java.io.Serializable;
 import java.math.BigDecimal;

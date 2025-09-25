@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.url;
+package br.com.ramiralvesmelo.util.http.url;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -6,11 +6,11 @@ import java.util.Map;
 
 import org.apache.hc.core5.net.URIBuilder;
 
-import br.com.ramiralvesmelo.util.exception.UrlException;
+import br.com.ramiralvesmelo.util.core.exception.UrlException;
 
-public final class UrlUtil {
+public final class UrlBuilder {
 
-    private UrlUtil() {}
+    private UrlBuilder() {}
 
     // =========================================================
     // Builders principais
@@ -90,7 +90,7 @@ public final class UrlUtil {
                     .build()
                     .toString();
         } catch (URISyntaxException e) {
-            throw new br.com.ramiralvesmelo.util.exception.UrlException("URL inválida: " + baseUrl, e);
+            throw new br.com.ramiralvesmelo.util.core.exception.UrlException("URL inválida: " + baseUrl, e);
         }
     }
 

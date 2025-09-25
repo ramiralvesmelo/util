@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.repository;
+package br.com.ramiralvesmelo.util.data.jpa;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.List;

@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.exception;
+package br.com.ramiralvesmelo.util.core.exception;
 
 public class JwtRestClientException extends RuntimeException {
     /**

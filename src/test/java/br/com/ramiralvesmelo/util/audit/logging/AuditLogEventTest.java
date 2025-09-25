@@ -1,5 +1,5 @@
 // 
-package br.com.springboot.appdemo.message.event;
+package br.com.ramiralvesmelo.util.audit.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.ramiralvesmelo.util.shared.dto.AuditLogDto;
+import br.com.ramiralvesmelo.util.commons.dto.AuditLogDto;
 
 class AuditLogEventTest {
 

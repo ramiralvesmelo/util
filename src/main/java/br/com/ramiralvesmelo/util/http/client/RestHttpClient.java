@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.http;
+package br.com.ramiralvesmelo.util.http.client;
 
 import java.time.Duration;
 import java.util.List;
@@ -27,9 +27,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-public final class RestClient {
+public final class RestHttpClient {
 
-    private RestClient() {}
+    private RestHttpClient() {}
 
     private static final AtomicReference<RestTemplate> REF = new AtomicReference<>();
     private static volatile String baseUrl = "";

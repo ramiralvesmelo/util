@@ -1,12 +1,12 @@
-package br.com.ramiralvesmelo.util.audit.log;
+package br.com.ramiralvesmelo.util.audit.logging;
 
 import java.util.Map;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.ramiralvesmelo.util.shared.dto.AuditLogDto;
-import br.com.ramiralvesmelo.util.shared.interfaces.AuditLogService;
+import br.com.ramiralvesmelo.util.commons.dto.AuditLogDto;
+import br.com.ramiralvesmelo.util.commons.interfaces.AuditLogService;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 

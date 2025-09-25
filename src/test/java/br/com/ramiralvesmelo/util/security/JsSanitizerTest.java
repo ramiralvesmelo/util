@@ -1,10 +1,10 @@
-package br.com.ramiralvesmelo.util.sanitize;
+package br.com.ramiralvesmelo.util.security;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import br.com.ramiralvesmelo.util.sanitize.JsSanitizer;
+import br.com.ramiralvesmelo.util.security.JsSanitizer;
 
 class JsSanitizerTest {
 

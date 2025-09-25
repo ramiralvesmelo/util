@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.exception;
+package br.com.ramiralvesmelo.util.core.exception;
 
 import org.springframework.http.HttpStatus;
 

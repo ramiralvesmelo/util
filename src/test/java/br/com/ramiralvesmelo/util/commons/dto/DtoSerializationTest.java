@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.shared.dto;
+package br.com.ramiralvesmelo.util.commons.dto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -11,6 +11,10 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import br.com.ramiralvesmelo.util.commons.dto.DocumentDto;
+import br.com.ramiralvesmelo.util.commons.dto.OrderDto;
+import br.com.ramiralvesmelo.util.commons.dto.OrderItemDto;
 
 //TODO: CORRIGIR!!!
 @Disabled("Desativado temporariamente até corrigir implementação")

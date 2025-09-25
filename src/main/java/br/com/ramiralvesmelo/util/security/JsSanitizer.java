@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.sanitize;
+package br.com.ramiralvesmelo.util.security;
 
 /**
  * Utilitário para sanitizar strings antes de embutir em JavaScript.

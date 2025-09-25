@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.repository;
+package br.com.ramiralvesmelo.util.data.jpa;
 
 import java.util.List;
 import java.util.Optional;

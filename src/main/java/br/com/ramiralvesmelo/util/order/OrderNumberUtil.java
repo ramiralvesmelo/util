@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.number;
+package br.com.ramiralvesmelo.util.order;
 
 import com.github.f4b6a3.ulid.UlidCreator;
 

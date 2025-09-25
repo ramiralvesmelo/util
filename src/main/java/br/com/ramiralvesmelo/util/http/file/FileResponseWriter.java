@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.io;
+package br.com.ramiralvesmelo.util.http.file;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -6,14 +6,14 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-import br.com.ramiralvesmelo.util.exception.IntegrationException;
+import br.com.ramiralvesmelo.util.core.exception.IntegrationException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class FileResponseUtil {
+public final class FileResponseWriter {
 
-    private FileResponseUtil() {
+    private FileResponseWriter() {
         // utilitário -> não deve ser instanciado
     }
 

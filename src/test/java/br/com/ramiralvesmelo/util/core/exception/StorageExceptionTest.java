@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.exception;
+package br.com.ramiralvesmelo.util.core.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -10,6 +10,8 @@ import java.lang.reflect.Field;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import br.com.ramiralvesmelo.util.core.exception.StorageException;
 
 class StorageExceptionTest {
 

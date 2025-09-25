@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.mapper;
+package br.com.ramiralvesmelo.util.core.mapper;
 
 import org.modelmapper.ModelMapper;
 
