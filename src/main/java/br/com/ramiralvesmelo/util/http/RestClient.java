@@ -1,285 +1,197 @@
 package br.com.ramiralvesmelo.util.http;
 
-import java.net.URI;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
-import br.com.ramiralvesmelo.util.exception.JwtRestClientException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-/**
- * Cliente REST estático com cache de access_token (OAuth2 Client Credentials).
- * - Chame init(...) uma única vez na inicialização da aplicação.
- * - Use os métodos estáticos get/post/put/patch/delete.
- */
 public final class RestClient {
-
-    private static volatile RestTemplate restTemplate;
-
-    private static volatile String baseUrl;
-    private static volatile String tokenUri;
-    private static volatile String clientId;
-    private static volatile String clientSecret;
-    private static volatile String scope;
-
-    private static final AtomicReference<String> CACHED_TOKEN = new AtomicReference<>(null);
-    private static final AtomicReference<Instant> TOKEN_EXPIRY = new AtomicReference<>(Instant.EPOCH);
 
     private RestClient() {}
 
-    /* ==========================
-       Inicialização
-       ========================== */
-    public static synchronized void init(Config cfg) {
-        if (cfg == null) throw new IllegalArgumentException("Config não pode ser nula.");
+    private static final AtomicReference<RestTemplate> REF = new AtomicReference<>();
+    private static volatile String baseUrl = "";
+    private static volatile Supplier<String> bearerSupplier = () -> null;
 
-        baseUrl = cfg.baseUrl;
-        tokenUri = cfg.tokenUri;
-        clientId = cfg.clientId;
-        clientSecret = cfg.clientSecret;
-        scope = cfg.scope;
-
-        if (cfg.restTemplate != null) {
-            restTemplate = cfg.restTemplate;
-        } else {
-        	var factory = new HttpComponentsClientHttpRequestFactory();
-        	factory.setConnectTimeout(Duration.ofMillis(cfg.connectTimeoutMs));
-        	factory.setConnectionRequestTimeout(Duration.ofMillis(cfg.connectTimeoutMs));
-        	factory.setReadTimeout(Duration.ofMillis(cfg.readTimeoutMs));
-
-        	restTemplate = new RestTemplate(factory);
-        }
-
-        // limpa token cacheado ao reinicializar
-        CACHED_TOKEN.set(null);
-        TOKEN_EXPIRY.set(Instant.EPOCH);
+    public static final class Cfg {
+        public String baseUrl;
+        public Duration connectTimeout = Duration.ofSeconds(3);
+        public Duration readTimeout = Duration.ofSeconds(5);
+        /** retorna "Bearer xxx" ou só o token */
+        public Supplier<String> bearerSupplier;
+        public List<ClientHttpRequestInterceptor> extraInterceptors = List.of();
+        /** pool (opcional) */
+        public int maxTotal = 200;
+        public int maxPerRoute = 50;
     }
 
-    public static boolean isInitialized() {
-        return restTemplate != null && baseUrl != null && tokenUri != null
-                && clientId != null && clientSecret != null;
-    }
+    public static void init(Cfg cfg) {
+        Objects.requireNonNull(cfg, "cfg");
+        baseUrl = cfg.baseUrl != null ? cfg.baseUrl : "";
 
-    private static void ensureInitialized() {
-        if (!isInitialized()) {
-            throw new IllegalStateException("JwtRestClientStatic não inicializado. Chame JwtRestClientStatic.init(cfg) no boot.");
-        }
-    }
+        // 1) connect timeout no ConnectionConfig (sem deprecated)
+        ConnectionConfig connConfig = ConnectionConfig.custom()
+                .setConnectTimeout(Timeout.ofMilliseconds(cfg.connectTimeout.toMillis()))
+                .build();
 
-    /* ==========================
-       Token (client_credentials)
-       ========================== */
-    public static synchronized String obterAccessToken() {
-        ensureInitialized();
-        Instant now = Instant.now();
+        // 2) connection manager + pool
+        PoolingHttpClientConnectionManager cm = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDefaultConnectionConfig(connConfig)
+                .build();
+        cm.setMaxTotal(cfg.maxTotal);
+        cm.setDefaultMaxPerRoute(cfg.maxPerRoute);
 
-        var tok = CACHED_TOKEN.get();
-        var exp = TOKEN_EXPIRY.get();
-        if (tok != null && exp != null && exp.isAfter(now.plusSeconds(30))) {
-            return tok;
-        }
+        // 3) response timeout por requisição
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setResponseTimeout(Timeout.ofMilliseconds(cfg.readTimeout.toMillis()))
+                .build();
 
-        try {
-            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-            form.add("grant_type", "client_credentials");
-            form.add("client_id", clientId);
-            form.add("client_secret", clientSecret);
-            if (scope != null && !scope.isBlank()) form.add("scope", scope);
+        // 4) HttpClient
+        CloseableHttpClient httpClient = HttpClientBuilder.create()
+                .setConnectionManager(cm)
+                .setDefaultRequestConfig(requestConfig)
+                .evictExpiredConnections()
+                .build();
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+        // 5) RequestFactory
+        HttpComponentsClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
+        // compat: algumas versões do Spring ainda usam int aqui
+        rf.setConnectTimeout((int) cfg.connectTimeout.toMillis());
+        rf.setReadTimeout((int) cfg.readTimeout.toMillis());
 
-            @SuppressWarnings("rawtypes")
-			ResponseEntity<Map> resp = restTemplate.postForEntity(
-                    tokenUri, new HttpEntity<>(form, headers), Map.class);
+        // 6) Jackson JavaTime
+        ObjectMapper om = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        MappingJackson2HttpMessageConverter jackson = new MappingJackson2HttpMessageConverter(om);
 
-            Map<?, ?> body = resp.getBody();
-            if (body == null || !body.containsKey("access_token")) {
-                throw new JwtRestClientException("Resposta do token endpoint inválida (sem access_token).");
+        // 7) RestTemplate
+        RestTemplate rt = new RestTemplate(rf);
+        rt.getMessageConverters().removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
+        rt.getMessageConverters().add(0, jackson);
+
+        // 8) Interceptor Bearer
+        bearerSupplier = cfg.bearerSupplier != null ? cfg.bearerSupplier : () -> null;
+        ClientHttpRequestInterceptor auth = (req, body, ex) -> {
+            String token = bearerSupplier.get();
+            if (token != null && !token.isBlank()) {
+                req.getHeaders().set(HttpHeaders.AUTHORIZATION,
+                        token.startsWith("Bearer ") ? token : "Bearer " + token);
             }
+            return ex.execute(req, body);
+        };
+        rt.getInterceptors().add(auth);
 
-            String token = Objects.toString(body.get("access_token"));
-            long expiresIn = body.get("expires_in") != null
-                    ? Long.parseLong(body.get("expires_in").toString())
-                    : 300L;
-
-            CACHED_TOKEN.set(token);
-            TOKEN_EXPIRY.set(now.plusSeconds(expiresIn));
-            return token;
-
-        } catch (HttpStatusCodeException e) {
-            throw new JwtRestClientException("Falha ao obter token: HTTP "
-                    + e.getStatusCode().value() + " - " + e.getResponseBodyAsString(), e);
-        } catch (Exception e) {
-            throw new JwtRestClientException("Falha ao obter token: " + e.getMessage(), e);
-        }
-    }
-
-    /* ==========================
-       Métodos HTTP (Class<R>)
-       ========================== */
-    public static <R> R get(String url, Class<R> responseType) {
-        return exchange(HttpMethod.GET, url, null, responseType);
-    }
-
-    public static <T, R> R post(String url, T payload, Class<R> responseType) {
-        return exchange(HttpMethod.POST, url, payload, responseType);
-    }
-
-    public static <T, R> R put(String url, T payload, Class<R> responseType) {
-        return exchange(HttpMethod.PUT, url, payload, responseType);
-    }
-
-    public static <T, R> R patch(String url, T payload, Class<R> responseType) {
-        return exchange(HttpMethod.PATCH, url, payload, responseType);
-    }
-
-    public static <R> R delete(String url, Class<R> responseType) {
-        return exchange(HttpMethod.DELETE, url, null, responseType);
-    }
-
-    public static <T, R> R delete(String url, T payload, Class<R> responseType) {
-        return exchange(HttpMethod.DELETE, url, payload, responseType);
-    }
-
-    /* ==========================
-       Métodos HTTP (TypeReference)
-       ========================== */
-    public static <R> R get(String url, ParameterizedTypeReference<R> typeRef) {
-        return exchange(HttpMethod.GET, url, null, typeRef);
-    }
-
-    public static <T, R> R post(String url, T payload, ParameterizedTypeReference<R> typeRef) {
-        return exchange(HttpMethod.POST, url, payload, typeRef);
-    }
-
-    public static <T, R> R put(String url, T payload, ParameterizedTypeReference<R> typeRef) {
-        return exchange(HttpMethod.PUT, url, payload, typeRef);
-    }
-
-    public static <T, R> R patch(String url, T payload, ParameterizedTypeReference<R> typeRef) {
-        return exchange(HttpMethod.PATCH, url, payload, typeRef);
-    }
-
-    public static <R> R delete(String url, ParameterizedTypeReference<R> typeRef) {
-        return exchange(HttpMethod.DELETE, url, null, typeRef);
-    }
-
-    public static <T, R> R delete(String url, T payload, ParameterizedTypeReference<R> typeRef) {
-        return exchange(HttpMethod.DELETE, url, payload, typeRef);
-    }
-
-    /* ==========================
-       Núcleo (Class<R>)
-       ========================== */
-    private static <T, R> R exchange(HttpMethod method, String url, T payload, Class<R> responseType) {
-        ensureInitialized();
-        String token = obterAccessToken();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
-        headers.setBearerAuth(token);
-        if (payload != null && method != HttpMethod.GET) {
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        if (cfg.extraInterceptors != null && !cfg.extraInterceptors.isEmpty()) {
+            rt.getInterceptors().addAll(cfg.extraInterceptors);
         }
 
-        HttpEntity<T> entity = new HttpEntity<>(payload, headers);
-        String effectiveUrl = buildUrl(url);
-
-        try {
-            ResponseEntity<R> resp = restTemplate.exchange(
-                    URI.create(effectiveUrl), method, entity, responseType);
-            return resp.getBody();
-        } catch (HttpStatusCodeException e) {
-            String body = e.getResponseBodyAsString();
-            throw new JwtRestClientException("Erro HTTP " + e.getStatusCode().value()
-                    + " ao chamar " + effectiveUrl + ": " + body, e);
-        } catch (Exception e) {
-            throw new JwtRestClientException("Falha na chamada " + method + " " + effectiveUrl
-                    + ": " + e.getMessage(), e);
-        }
+        REF.set(rt);
     }
 
-    /* ==========================
-       Núcleo (TypeReference)
-       ========================== */
-    private static <T, R> R exchange(HttpMethod method, String url, T payload, ParameterizedTypeReference<R> typeRef) {
-        ensureInitialized();
-        String token = obterAccessToken();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
-        headers.setBearerAuth(token);
-        if (payload != null && method != HttpMethod.GET) {
-            headers.setContentType(MediaType.APPLICATION_JSON);
+    private static RestTemplate rt() {
+        RestTemplate r = REF.get();
+        if (r == null) {
+            throw new IllegalStateException("RestClient não inicializado. Chame RestClient.init(cfg) no boot.");
         }
-
-        HttpEntity<T> entity = new HttpEntity<>(payload, headers);
-        String effectiveUrl = buildUrl(url);
-
-        try {
-            ResponseEntity<R> resp = restTemplate.exchange(
-                    URI.create(effectiveUrl), method, entity, typeRef);
-            return resp.getBody();
-        } catch (HttpStatusCodeException e) {
-            String body = e.getResponseBodyAsString();
-            throw new JwtRestClientException("Erro HTTP " + e.getStatusCode().value()
-                    + " ao chamar " + effectiveUrl + ": " + body, e);
-        } catch (Exception e) {
-            throw new JwtRestClientException("Falha na chamada " + method + " " + effectiveUrl
-                    + ": " + e.getMessage(), e);
-        }
+        return r;
     }
 
-    /* ==========================
-       Helpers
-       ========================== */
-    private static String buildUrl(String url) {
-        if (url == null || url.isBlank()) return baseUrl;
-        boolean absolute = url.startsWith("http://") || url.startsWith("https://");
-        if (absolute) return url;
-        if (baseUrl.endsWith("/") && url.startsWith("/"))
-            return baseUrl.substring(0, baseUrl.length() - 1) + url;
-        if (!baseUrl.endsWith("/") && !url.startsWith("/"))
-            return baseUrl + "/" + url;
-        return baseUrl + url;
+    private static String url(String path) {
+        if (path == null) return baseUrl;
+        if (path.startsWith("http://") || path.startsWith("https://")) return path;
+        if (baseUrl == null || baseUrl.isBlank()) return path;
+        if (baseUrl.endsWith("/") && path.startsWith("/")) return baseUrl + path.substring(1);
+        if (!baseUrl.endsWith("/") && !path.startsWith("/")) return baseUrl + "/" + path;
+        return baseUrl + path;
     }
 
-    /* ==========================
-       Config
-       ========================== */
-    public static final class Config {
-        private String baseUrl;
-        private String tokenUri;
-        private String clientId;
-        private String clientSecret;
-        private String scope;
-        private int connectTimeoutMs = 5000;
-        private int readTimeoutMs = 15000;
-        private RestTemplate restTemplate; // opcional (injete o seu, se quiser)
+    // ==== helpers básicos (Class<T>) ====
 
-        public Config baseUrl(String v) { this.baseUrl = v; return this; }
-        public Config tokenUri(String v) { this.tokenUri = v; return this; }
-        public Config clientId(String v) { this.clientId = v; return this; }
-        public Config clientSecret(String v) { this.clientSecret = v; return this; }
-        public Config scope(String v) { this.scope = v; return this; }
-        public Config connectTimeoutMs(int v) { this.connectTimeoutMs = v; return this; }
-        public Config readTimeoutMs(int v) { this.readTimeoutMs = v; return this; }
-        public Config restTemplate(RestTemplate rt) { this.restTemplate = rt; return this; }
+    public static <T> T get(String path, Class<T> type) {
+        return rt().getForObject(url(path), type);
+    }
+
+    public static <T> ResponseEntity<T> getEntity(String path, Class<T> type) {
+        return rt().getForEntity(url(path), type);
+    }
+
+    public static <B, R> R post(String path, B body, Class<R> type) {
+        return rt().postForObject(url(path), body, type);
+    }
+
+    public static <B, R> R put(String path, B body, Class<R> type) {
+        ResponseEntity<R> resp = exchange(path, HttpMethod.PUT, null, body, type);
+        return resp.getBody();
+    }
+
+    public static <R> R delete(String path, Class<R> type) {
+        ResponseEntity<R> resp = exchange(path, HttpMethod.DELETE, null, null, type);
+        return resp.getBody();
+    }
+
+    // ==== helpers tipados (ParameterizedTypeReference<R>) ====
+
+    public static <R> R get(String path, ParameterizedTypeReference<R> typeRef) {
+        ResponseEntity<R> resp = exchange(path, HttpMethod.GET, null, null, typeRef);
+        return resp.getBody();
+    }
+
+    public static <B, R> R post(String path, B body, ParameterizedTypeReference<R> typeRef) {
+        ResponseEntity<R> resp = exchange(path, HttpMethod.POST, null, body, typeRef);
+        return resp.getBody();
+    }
+
+    public static <B, R> R put(String path, B body, ParameterizedTypeReference<R> typeRef) {
+        ResponseEntity<R> resp = exchange(path, HttpMethod.PUT, null, body, typeRef);
+        return resp.getBody();
+    }
+
+    public static <R> R delete(String path, ParameterizedTypeReference<R> typeRef) {
+        ResponseEntity<R> resp = exchange(path, HttpMethod.DELETE, null, null, typeRef);
+        return resp.getBody();
+    }
+
+    // ==== exchange genéricos ====
+
+    public static <B, R> ResponseEntity<R> exchange(
+            String path, HttpMethod method, B body, Class<R> responseType) {
+        HttpEntity<B> entity = new HttpEntity<>(body);
+        return rt().exchange(url(path), method, entity, responseType);
+    }
+
+    public static <B, R> ResponseEntity<R> exchange(
+            String path, HttpMethod method, HttpHeaders headers, B body, Class<R> responseType) {
+        HttpEntity<B> entity = new HttpEntity<>(body, headers);
+        return rt().exchange(url(path), method, entity, responseType);
+    }
+
+    public static <B, R> ResponseEntity<R> exchange(
+            String path, HttpMethod method, HttpHeaders headers, B body,
+            ParameterizedTypeReference<R> typeRef) {
+        HttpEntity<B> entity = new HttpEntity<>(body, headers);
+        return rt().exchange(url(path), method, entity, typeRef);
     }
 }

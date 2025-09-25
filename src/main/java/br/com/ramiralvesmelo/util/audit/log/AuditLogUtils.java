@@ -5,7 +5,7 @@ import java.util.Map;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.ramiralvesmelo.util.shared.event.AuditLogEvent;
+import br.com.ramiralvesmelo.util.shared.dto.AuditLogDto;
 import br.com.ramiralvesmelo.util.shared.interfaces.AuditLogService;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class AuditLogUtils {
                     sourceObj, new TypeReference<Map<String, Object>>() {}
             );
 
-            AuditLogEvent event = new AuditLogEvent();
+            AuditLogDto event = new AuditLogDto();
             event.setPayload(payload);
             service.send(event);
             log.info("AuditLog enviado. type={}", sourceObj.getClass().getSimpleName());

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.ramiralvesmelo.util.shared.event.AuditLogEvent;
+import br.com.ramiralvesmelo.util.shared.dto.AuditLogDto;
 
 class AuditLogEventTest {
 
@@ -22,7 +22,7 @@ class AuditLogEventTest {
 		payload.put("user", "alice");
 		payload.put("action", "LOGIN");
 
-		AuditLogEvent event = AuditLogEvent.builder().id("123").payload(payload).build();
+		AuditLogDto event = AuditLogDto.builder().id("123").payload(payload).build();
 
 		assertThat(event.getId()).isEqualTo("123");
 		assertThat(event.getPayload()).containsEntry("user", "alice").containsEntry("action", "LOGIN");
@@ -31,7 +31,7 @@ class AuditLogEventTest {
 	@Test
 	@DisplayName("Getters/Setters e construtor vazio funcionam")
 	void shouldUseGettersSettersAndNoArgsConstructor() {
-		AuditLogEvent event = new AuditLogEvent(); // @NoArgsConstructor
+		AuditLogDto event = new AuditLogDto(); // @NoArgsConstructor
 		assertThat(event.getId()).isNull();
 		assertThat(event.getPayload()).isNull();
 
@@ -49,7 +49,7 @@ class AuditLogEventTest {
 	@DisplayName("Construtor com todos os argumentos deve atribuir valores")
 	void shouldUseAllArgsConstructor() {
 		Map<String, Object> payload = Map.of("ok", true);
-		AuditLogEvent event = new AuditLogEvent("id-1", payload);
+		AuditLogDto event = new AuditLogDto("id-1", payload);
 
 		assertThat(event.getId()).isEqualTo("id-1");
 		assertThat(event.getPayload()).isEqualTo(payload);
@@ -61,9 +61,9 @@ class AuditLogEventTest {
 		Map<String, Object> p1 = Map.of("x", 1);
 		Map<String, Object> p2 = Map.of("x", 1);
 
-		AuditLogEvent a = AuditLogEvent.builder().id("X").payload(p1).build();
-		AuditLogEvent b = AuditLogEvent.builder().id("X").payload(p2).build();
-		AuditLogEvent c = AuditLogEvent.builder().id("Y").payload(p1).build();
+		AuditLogDto a = AuditLogDto.builder().id("X").payload(p1).build();
+		AuditLogDto b = AuditLogDto.builder().id("X").payload(p2).build();
+		AuditLogDto c = AuditLogDto.builder().id("Y").payload(p1).build();
 
 		assertThat(a)
 			.isEqualTo(b)
@@ -76,7 +76,7 @@ class AuditLogEventTest {
 	@Test
 	@DisplayName("toString deve conter campos principais")
 	void toStringContainsFields() {
-		AuditLogEvent event = AuditLogEvent.builder().id("T-1").payload(Map.of("key", "value")).build();
+		AuditLogDto event = AuditLogDto.builder().id("T-1").payload(Map.of("key", "value")).build();
 
 		String s = event.toString(); // @Data gera toString
 		assertThat(s).contains("T-1").contains("key").contains("value");
@@ -86,10 +86,10 @@ class AuditLogEventTest {
 	@DisplayName("Jackson: serializar e desserializar mantendo valores")
 	void jacksonSerializationRoundTrip() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
-		AuditLogEvent original = AuditLogEvent.builder().id("J-1").payload(Map.of("a", 10, "b", "str")).build();
+		AuditLogDto original = AuditLogDto.builder().id("J-1").payload(Map.of("a", 10, "b", "str")).build();
 
 		String json = mapper.writeValueAsString(original);
-		AuditLogEvent restored = mapper.readValue(json, AuditLogEvent.class);
+		AuditLogDto restored = mapper.readValue(json, AuditLogDto.class);
 
 		assertThat(restored).isEqualTo(original);
 		assertThat(restored.getPayload()).containsEntry("a", 10).containsEntry("b", "str");
@@ -99,7 +99,7 @@ class AuditLogEventTest {
 	@DisplayName("Objeto mutável: alterações no payload são refletidas")
 	void payloadIsMutableMapReference() {
 		Map<String, Object> payload = new HashMap<>();
-		AuditLogEvent event = AuditLogEvent.builder().id("M").payload(payload).build();
+		AuditLogDto event = AuditLogDto.builder().id("M").payload(payload).build();
 
 		payload.put("n", 42);
 		assertThat(event.getPayload()).containsEntry("n", 42);

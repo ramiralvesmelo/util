@@ -1,4 +1,4 @@
-package br.com.ramiralvesmelo.util.shared.event;
+package br.com.ramiralvesmelo.util.shared.dto;
 
 import java.util.Map;
 
@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuditLogEvent {
+public class AuditLogDto {
 
     private String id;
     private Map<String, Object> payload;
