@@ -12,6 +12,10 @@ public final class UrlUtil {
 
     private UrlUtil() {}
 
+    // =========================================================
+    // Builders principais
+    // =========================================================
+
     /** Monta URL absoluta juntando a base (que pode conter path) com um path relativo. */
     public static String buildAbsolute(String baseUrl, String path) {
         try {
@@ -76,52 +80,64 @@ public final class UrlUtil {
      */
     public static String buidlUrl(String baseUrl, String path, String orderNumber) {
         try {
-            String basePath = new URI(baseUrl).getPath(); // preserva a barra final se houver
-            // concatena sem normalizar para manter comportamento legado (pode resultar em "//")
+            URI base = new URI(baseUrl);
+            // ⚠️ comportamento legado: concatenar sem normalizar, preservando '//' se houver
+            String basePath = safe(base.getPath());          // preserva a barra final, se existir
             String finalPath = safe(basePath) + safe(path) + sanitize(orderNumber);
-            return new org.apache.hc.core5.net.URIBuilder(baseUrl)
-                    .setPath(finalPath)
+
+            return new URIBuilder(base)
+                    .setPath(finalPath) // não chama normalizePath aqui!
                     .build()
                     .toString();
         } catch (URISyntaxException e) {
-            // teste espera UrlException
             throw new br.com.ramiralvesmelo.util.exception.UrlException("URL inválida: " + baseUrl, e);
         }
     }
 
-    /** Alias sem typo (opcional). */
+    /** Alias sem typo (mantém compatibilidade externa). */
     public static String buildUrl(String baseUrl, String path, String orderNumber) {
         return buidlUrl(baseUrl, path, orderNumber);
     }
 
-    // ----------------- helpers -----------------
+    // =========================================================
+    // Helpers
+    // =========================================================
 
+    /** Concatena paths tratando barras à esquerda/direita. */
     private static String joinPaths(String left, String right) {
         String a = safe(left);
         String b = safe(right);
         if (a.isEmpty()) return b;
         if (b.isEmpty()) return a;
-        boolean aEnds = a.endsWith("/");
+
+        boolean aEnds   = a.endsWith("/");
         boolean bStarts = b.startsWith("/");
-        if (aEnds && bStarts)  return a + b.substring(1); // remove barra duplicada na junção
-        if (!aEnds && !bStarts) return a + "/" + b;       // adiciona barra quando falta
-        return a + b;
+
+        if (aEnds && bStarts)  return a + b.substring(1); // remove barra duplicada
+        if (!aEnds && !bStarts) return a + "/" + b;       // inclui barra faltante
+        return a + b;                                      // já está adequado
     }
 
-    /** Colapsa sequências de múltiplas barras no PATH (sem tocar o esquema). */
+    /** Colapsa sequências de múltiplas barras no PATH (sem tocar esquema/host). */
     private static String normalizePath(String path) {
         if (path == null || path.isEmpty()) return "";
-        // substitui "////" -> "/" apenas no path (URIBuilder cuidará do restante)
         return path.replaceAll("/{2,}", "/");
     }
 
     private static String safe(String s) {
-        return s == null ? "" : s;
+        return (s == null) ? "" : s;
     }
 
-    /** Sanitiza identificadores para evitar caracteres inválidos na URL. */
+    /** Sanitiza identificadores para uso como parte do path. */
     private static String sanitize(String value) {
         if (value == null) return "";
+        // Permite letras, números, ponto, sublinhado e hífen. Demais viram "_".
         return value.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    /** Escapa para uso em query/form (URLEncoder usa '+' para espaços). */
+    public static String escape(String s) {
+        if (s == null) return null;
+        return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
     }
 }
