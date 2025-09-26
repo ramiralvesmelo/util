@@ -13,12 +13,12 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplateConfig {
 
     @Bean
-    public RestTemplate restTemplate(
+    RestTemplate restTemplate(
             @Value("${api.http.connect-timeout-ms:5000}") int connectTimeoutMs,
             @Value("${api.http.read-timeout-ms:15000}") int readTimeoutMs) {
 
-        var requestConfig = RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(connectTimeoutMs))
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(connectTimeoutMs))
                 .setResponseTimeout(Timeout.ofMilliseconds(readTimeoutMs))
                 .build();
 

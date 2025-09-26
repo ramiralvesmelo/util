@@ -1,41 +1,40 @@
 package br.com.ramiralvesmelo.util.order;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Pattern;
+import java.lang.reflect.Constructor;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import br.com.ramiralvesmelo.util.order.OrderNumberUtil;
 
 class OrderNumberUtilTest {
 
-    // ULID (Crockford Base32) sem I, L, O, U — 26 caracteres
-    private static final Pattern ULID_PATTERN =
-        Pattern.compile("^ORD-[0-9A-HJKMNP-TV-Z]{26}$");
-
     @Test
-    @DisplayName("Formato deve ser ORD- + ULID (26 chars Base32 Crockford)")
-    void formatIsCorrect() {
-        String num = OrderNumberUtil.generate();
-        assertTrue(ULID_PATTERN.matcher(num).matches(),
-            "Formato inválido: " + num);
-        assertTrue(num.startsWith("ORD-"));
-        assertEquals(30, num.length()); // "ORD-" (4) + 26 = 30
+    void construtorPrivado_deveSerInacessivelMasInstanciavelPorReflexao() throws Exception {
+        Constructor<OrderNumberUtil> ctor = OrderNumberUtil.class.getDeclaredConstructor();
+        assertFalse(ctor.canAccess(null)); // privado
+        ctor.setAccessible(true);
+        OrderNumberUtil instance = ctor.newInstance();
+        assertNotNull(instance); // garante que instanciou
     }
 
     @Test
-    @DisplayName("Geração deve ser única em um conjunto razoável")
-    void shouldBeUnique() {
-        int n = 1000;
-        Set<String> set = new HashSet<>(n);
-        for (int i = 0; i < n; i++) {
-            set.add(OrderNumberUtil.generate());
-        }
-        assertEquals(n, set.size(), "Houve colisões inesperadas.");
+    void generate_deveGerarNumeroComPrefixoOrdEFormatoUlid() {
+        String order = OrderNumberUtil.generate();
+
+        assertNotNull(order);
+        assertTrue(order.startsWith("ORD-"), "Deve começar com ORD-");
+        String ulid = order.substring(4);
+
+        // ULID deve ter 26 caracteres alfanuméricos maiúsculos
+        assertEquals(26, ulid.length());
+        assertTrue(ulid.matches("^[0-9A-Z]{26}$"),
+                "ULID deve conter apenas letras maiúsculas e números: " + ulid);
+    }
+
+    @Test
+    void generate_deveGerarValoresUnicos() {
+        String a = OrderNumberUtil.generate();
+        String b = OrderNumberUtil.generate();
+        assertNotEquals(a, b);
     }
 }

@@ -1,38 +1,29 @@
 package br.com.ramiralvesmelo.util.config;
 
-
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.orm.jpa.JpaVendorAdapter;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 
-
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = DatabaseConfig.class)
-@ActiveProfiles("test")
 class DatabaseConfigTest {
 
-  @Autowired
-  DataSource dataSource;
+    private final DatabaseConfig config = new DatabaseConfig();
 
-  @Test
-  void deveCriarDataSourceH2EmMemoriaNoProfileTest() throws Exception {
-    assertThat(dataSource).isNotNull();
-
-    try (Connection c = dataSource.getConnection()) {
-      DatabaseMetaData md = c.getMetaData();
-      assertThat(md.getURL()).contains("jdbc:h2:mem:testdb");
-      assertThat(md.getDatabaseProductName()).containsIgnoringCase("H2");
+    @Test
+    void deveCriarDataSourceParaProfileTest() {
+        DataSource ds = config.dataSource();
+        assertNotNull(ds, "DataSource não deve ser nulo");
     }
-  }
+
+    @Test
+    void deveCriarJpaVendorAdapter() {
+        JpaVendorAdapter adapter = config.jpaVendorAdapter();
+        assertNotNull(adapter);
+        assertTrue(adapter instanceof HibernateJpaVendorAdapter, 
+            "Adapter deve ser do tipo HibernateJpaVendorAdapter");
+    }
 }

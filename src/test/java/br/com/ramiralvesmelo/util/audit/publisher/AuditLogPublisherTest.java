@@ -1,110 +1,115 @@
-// 
 package br.com.ramiralvesmelo.util.audit.publisher;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import br.com.ramiralvesmelo.util.commons.dto.AuditLogDto;
+import br.com.ramiralvesmelo.util.commons.interfaces.AuditLogStoreService;
 
+@ExtendWith(MockitoExtension.class)
 class AuditLogPublisherTest {
 
-	@Test
-	@DisplayName("Builder deve popular campos corretamente")
-	void shouldBuildWithFields() {
-		Map<String, Object> payload = new HashMap<>();
-		payload.put("user", "alice");
-		payload.put("action", "LOGIN");
+    @Mock
+    private AuditLogStoreService service;
 
-		AuditLogDto event = AuditLogDto.builder().id("123").payload(payload).build();
+    // ======= Validações de parâmetros =======
 
-		assertThat(event.getId()).isEqualTo("123");
-		assertThat(event.getPayload()).containsEntry("user", "alice").containsEntry("action", "LOGIN");
-	}
+    @Test
+    void publishAuditLog_deveLancarQuandoServiceNulo() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> AuditLogPublisher.publishAuditLog(null, new Object()));
+        assertTrue(ex.getMessage().contains("service ou sourceObj nulos"));
+        verifyNoInteractions(service);
+    }
 
-	@Test
-	@DisplayName("Getters/Setters e construtor vazio funcionam")
-	void shouldUseGettersSettersAndNoArgsConstructor() {
-		AuditLogDto event = new AuditLogDto(); // @NoArgsConstructor
-		assertThat(event.getId()).isNull();
-		assertThat(event.getPayload()).isNull();
+    @Test
+    void publishAuditLog_deveLancarQuandoSourceNulo() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> AuditLogPublisher.publishAuditLog(service, null));
+        assertTrue(ex.getMessage().contains("service ou sourceObj nulos"));
+        verifyNoMoreInteractions(service);
+    }
 
-		Map<String, Object> payload = new HashMap<>();
-		payload.put("k", 1);
+    // ======= Fluxo de sucesso =======
 
-		event.setId("abc");
-		event.setPayload(payload);
+    @Test
+    void publishAuditLog_deveConverterMapEEnviar() {
+        // given: um Map simples como source (evita criar DTO só para teste)
+        Map<String, Object> source = new HashMap<>();
+        source.put("id", 123);
+        source.put("nome", "teste");
 
-		assertThat(event.getId()).isEqualTo("abc");
-		assertThat(event.getPayload()).containsEntry("k", 1);
-	}
+        ArgumentCaptor<AuditLogDto> captor = ArgumentCaptor.forClass(AuditLogDto.class);
+        doNothing().when(service).send(any(AuditLogDto.class));
 
-	@Test
-	@DisplayName("Construtor com todos os argumentos deve atribuir valores")
-	void shouldUseAllArgsConstructor() {
-		Map<String, Object> payload = Map.of("ok", true);
-		AuditLogDto event = new AuditLogDto("id-1", payload);
+        // when
+        AuditLogPublisher.publishAuditLog(service, source);
 
-		assertThat(event.getId()).isEqualTo("id-1");
-		assertThat(event.getPayload()).isEqualTo(payload);
-	}
+        // then
+        verify(service, times(1)).send(captor.capture());
+        AuditLogDto enviado = captor.getValue();
+        assertNotNull(enviado, "AuditLogDto não deve ser nulo");
+        assertNotNull(enviado.getPayload(), "Payload não deve ser nulo");
+        assertEquals(2, enviado.getPayload().size(), "Payload deve conter os mesmos itens do source");
+        assertEquals(123, enviado.getPayload().get("id"));
+        assertEquals("teste", enviado.getPayload().get("nome"));
 
-	@Test
-	@DisplayName("equals/hashCode gerados por Lombok devem funcionar")
-	void equalsAndHashCode() {
-		Map<String, Object> p1 = Map.of("x", 1);
-		Map<String, Object> p2 = Map.of("x", 1);
+        verifyNoMoreInteractions(service);
+    }
 
-		AuditLogDto a = AuditLogDto.builder().id("X").payload(p1).build();
-		AuditLogDto b = AuditLogDto.builder().id("X").payload(p2).build();
-		AuditLogDto c = AuditLogDto.builder().id("Y").payload(p1).build();
+    // ======= Fluxo de erro (exceção durante envio) =======
 
-		assertThat(a)
-			.isEqualTo(b)
-			.hasSameHashCodeAs(b)
-			.isNotEqualTo(c)
-			.isNotEqualTo((Object) null)
-			.isNotEqualTo(new Object());
-	}
+    @Test
+    void publishAuditLog_quandoSendLancarExcecao_deveApenasLogarSemPropagar() {
+        Map<String, Object> source = Map.of("k", "v");
 
-	@Test
-	@DisplayName("toString deve conter campos principais")
-	void toStringContainsFields() {
-		AuditLogDto event = AuditLogDto.builder().id("T-1").payload(Map.of("key", "value")).build();
+        // Força uma RuntimeException dentro do bloco try (após conversão)
+        doThrow(new RuntimeException("falha ao enviar"))
+            .when(service).send(any(AuditLogDto.class));
 
-		String s = event.toString(); // @Data gera toString
-		assertThat(s).contains("T-1").contains("key").contains("value");
-	}
+        assertDoesNotThrow(() -> AuditLogPublisher.publishAuditLog(service, source));
 
-	@Test
-	@DisplayName("Jackson: serializar e desserializar mantendo valores")
-	void jacksonSerializationRoundTrip() throws Exception {
-		ObjectMapper mapper = new ObjectMapper();
-		AuditLogDto original = AuditLogDto.builder().id("J-1").payload(Map.of("a", 10, "b", "str")).build();
+        // Mesmo tendo ocorrido falha, método foi chamado
+        verify(service, times(1)).send(any(AuditLogDto.class));
+        verifyNoMoreInteractions(service);
+    }
 
-		String json = mapper.writeValueAsString(original);
-		AuditLogDto restored = mapper.readValue(json, AuditLogDto.class);
+    // ======= Cobertura do construtor privado do @UtilityClass =======
 
-		assertThat(restored).isEqualTo(original);
-		assertThat(restored.getPayload()).containsEntry("a", 10).containsEntry("b", "str");
-	}
-
-	@Test
-	@DisplayName("Objeto mutável: alterações no payload são refletidas")
-	void payloadIsMutableMapReference() {
-		Map<String, Object> payload = new HashMap<>();
-		AuditLogDto event = AuditLogDto.builder().id("M").payload(payload).build();
-
-		payload.put("n", 42);
-		assertThat(event.getPayload()).containsEntry("n", 42);
-
-		event.getPayload().put("m", 7);
-		assertThat(payload).containsEntry("m", 7);
-	}
+    @Test
+    void constructor_privadoDeUtilityClass_deveLancarUnsupportedOperationException() throws Exception {
+        Constructor<?> ctor = AuditLogPublisher.class.getDeclaredConstructor();
+        assertTrue(ctor.canAccess(null) == false);
+        ctor.setAccessible(true);
+        try {
+            ctor.newInstance();
+            fail("Esperava UnsupportedOperationException ao instanciar UtilityClass");
+        } catch (InvocationTargetException ite) {
+            Throwable cause = ite.getCause();
+            assertTrue(cause instanceof UnsupportedOperationException,
+                "Causa esperada: UnsupportedOperationException");
+        }
+    }
 }

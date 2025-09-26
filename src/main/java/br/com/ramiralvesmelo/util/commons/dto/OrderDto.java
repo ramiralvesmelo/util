@@ -8,6 +8,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import br.com.ramiralvesmelo.util.commons.enums.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +29,7 @@ public class OrderDto implements Serializable {
     private Long customerId;
     private DocumentDto document;
     private String message;    
+    private Status status;
 
     @Builder.Default
     private List<OrderItemDto> items = new ArrayList<>();

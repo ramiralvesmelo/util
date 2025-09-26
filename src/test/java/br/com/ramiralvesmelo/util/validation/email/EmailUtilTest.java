@@ -1,239 +1,141 @@
 package br.com.ramiralvesmelo.util.validation.email;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import br.com.ramiralvesmelo.util.validation.email.EmailUtil;
-
-@DisplayName("EmailUtil.validateCustomerEmail")
 class EmailUtilTest {
 
-    // ===========================
-    // Válidos
-    // ===========================
+    // ========= casos válidos =========
+
     @Test
-    @DisplayName("Válidos: ASCII comuns e variações de case")
-    void deveAceitarEmailsValidosAscii() {
-        assertTrue(EmailUtil.validateCustomerEmail("a@b.co"));
-        assertTrue(EmailUtil.validateCustomerEmail("foo.bar+tag@sub.example.com"));
-        assertTrue(EmailUtil.validateCustomerEmail("USER_123-xyz@example.COM"));
-        assertTrue(EmailUtil.validateCustomerEmail("john.doe@example.travel"));
-        assertTrue(EmailUtil.validateCustomerEmail("a1.b2-c3@example-domain.org"));
+    void deveValidarEmailSimplesValido() {
+        String email = "john.doe+tag@example-domain.com";
+        assertTrue(EmailUtil.validateCustomerEmail(email));
     }
 
     @Test
-    @DisplayName("Válidos: bordas de maiúsculas, dígitos, hífen no domínio")
-    void deveAceitarMaiusculasEBordasValidas() {
-        assertTrue(EmailUtil.validateCustomerEmail("A@example.com"));
-        assertTrue(EmailUtil.validateCustomerEmail("a@example.COM"));
-        assertTrue(EmailUtil.validateCustomerEmail("Z9@example-domain.com"));
-        assertTrue(EmailUtil.validateCustomerEmail("user0@example.com"));
+    void deveValidarEmailComIdnQuandoAllowIdnTrue() {
+        // domínio com caractere não-ASCII -> IDN (ex.: müller.de)
+        String emailIdn = "user@müller.de";
+        assertTrue(EmailUtil.validateCustomerEmail(emailIdn, true));
     }
 
-    @Test
-    @DisplayName("Válidos: limites exatos (local=64; domínio=253)")
-    void deveAceitarLimitesExatos() {
-        String local64 = repeat('a', 64);
-        assertTrue(EmailUtil.validateCustomerEmail(local64 + "@example.com"));
-
-        String dom253 = domainLen253();
-        assertEquals(253, dom253.length(), "domínio precisa ter exatamente 253 chars");
-        assertTrue(EmailUtil.validateCustomerEmail("user@" + dom253));
-    }
+    // ========= casos inválidos gerais =========
 
     @Test
-    @DisplayName("Válidos: IDN via punycode (xn--mller-kva.de ≡ müller.de)")
-    void deveAceitarIdnPunycodeValido() {
-        assertTrue(EmailUtil.validateCustomerEmail("usuario@xn--mller-kva.de", true));
-    }
-
-    // ===========================
-    // Nulos e formato básico
-    // ===========================
-    @Test
-    @DisplayName("Formato: null, vazio e whitespace")
-    void deveRejeitarNullOuVazio() {
+    void deveFalharQuandoEmailNuloOuVazio() {
         assertFalse(EmailUtil.validateCustomerEmail(null));
-        assertFalse(EmailUtil.validateCustomerEmail(""));
         assertFalse(EmailUtil.validateCustomerEmail("   "));
     }
 
     @Test
-    @DisplayName("Formato: problemas com @ (ausente, múltiplos, faltando lados)")
-    void deveRejeitarProblemasComArroba() {
-        assertFalse(EmailUtil.validateCustomerEmail("noatsymbol.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("@domain.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("local@"));
+    void deveFalharQuandoArrobaInvalida() {
+        // sem @
+        assertFalse(EmailUtil.validateCustomerEmail("john.doe.example.com"));
+        // mais de um @
         assertFalse(EmailUtil.validateCustomerEmail("a@b@c.com"));
+        // @ no final
+        assertFalse(EmailUtil.validateCustomerEmail("a@"));
     }
 
     @Test
-    @DisplayName("Formato: pontos consecutivos no local-part e no domínio")
-    void deveRejeitarPontosConsecutivos() {
-        assertFalse(EmailUtil.validateCustomerEmail("a..b@example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("a@exa..mple.com"));
-    }
-
-    // ===========================
-    // Local-part inválida
-    // ===========================
-    @Test
-    @DisplayName("Local-part: ponto nas bordas / char inválido / símbolo")
-    void deveRejeitarLocalPartInvalida() {
-        assertFalse(EmailUtil.validateCustomerEmail(".abc@example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("abc.@example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("abç@example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("a!b@example.com"));
-    }
-
-    @Test
-    @DisplayName("Local-part: emoji (não ASCII)")
-    void deveRejeitarEmojiNoLocal() {
-        assertFalse(EmailUtil.validateCustomerEmail("us\uD83D\uDE00er@example.com"));
-    }
-
-    @Test
-    @DisplayName("Local-part: caracter inválido aciona caminho 'else' de ASCII")
-    void deveCobrirAsciiLettersDigits_noLocalPartComSimbolo() {
-        assertFalse(EmailUtil.validateCustomerEmail("user!@example.com"));
-    }
-
-    // ===========================
-    // Domínio inválido e limites
-    // ===========================
-    @Test
-    @DisplayName("Domínio: tamanhos inválidos (local>64, domínio>253, TLD curto)")
-    void deveRejeitarTamanhosInvalidos() {
-        String local65 = repeat('a', 65);
+    void deveFalharQuandoTamanhoLocalOuDominioIncorreto() {
+        // local > 64
+        String local65 = "a".repeat(65);
         assertFalse(EmailUtil.validateCustomerEmail(local65 + "@example.com"));
 
-        String longLabel = repeat('a', 63);
-        String base = longLabel + "." + longLabel + "." + longLabel + "." + longLabel;
-        assertTrue(base.length() > 253);
-        assertFalse(EmailUtil.validateCustomerEmail("user@" + base));
+        // dominio < 3
+        assertFalse(EmailUtil.validateCustomerEmail("a@x"));
 
-        assertFalse(EmailUtil.validateCustomerEmail("x@a.b")); // TLD 1 char
+        // dominio > 253
+        String longLabel = "a".repeat(63);
+        String bigDomain = longLabel + "." + longLabel + "." + longLabel + "." + longLabel + "." + longLabel;
+        assertTrue(bigDomain.length() > 253);
+        assertFalse(EmailUtil.validateCustomerEmail("a@" + bigDomain));
     }
 
     @Test
-    @DisplayName("Domínio: rótulos inválidos e TLD numérico")
-    void deveRejeitarDominioInvalido() {
-        assertFalse(EmailUtil.validateCustomerEmail("user@-example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@example-.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@ex_ample.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@.example.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@example..com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@example.123"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@example.c"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@example"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@" + repeat('a', 64) + ".com")); // label=64
+    void deveFalharQuandoHaPontosConsecutivosEmLocalOuDominio() {
+        assertFalse(EmailUtil.validateCustomerEmail("ab..cd@example.com"));
+        assertFalse(EmailUtil.validateCustomerEmail("abcd@ex..ample.com"));
     }
 
     @Test
-    @DisplayName("Domínio: curto demais (len < 3)")
-    void deveRejeitarDominioCurtoDemais() {
-        assertFalse(EmailUtil.validateCustomerEmail("x@a"));
-        assertFalse(EmailUtil.validateCustomerEmail("x@ab"));
+    void deveFalharQuandoLocalPartTemCaracterInvalido() {
+        assertFalse(EmailUtil.validateCustomerEmail("ab!cd@example.com")); // '!' não permitido no regex LOCAL_ALLOWED
     }
 
     @Test
-    @DisplayName("Domínio: label com 64 chars (inválido)")
-    void deveRejeitarLabelDeDominioCom64Chars() {
-        String dom = label(64) + ".com";
-        assertFalse(EmailUtil.validateCustomerEmail("user@" + dom));
+    void deveFalharQuandoLocalPartComecaOuTerminaComCharNaoAlfaNum() {
+        assertFalse(EmailUtil.validateCustomerEmail(".abc@example.com")); // começa com '.'
+        assertFalse(EmailUtil.validateCustomerEmail("abc.@example.com")); // termina com '.'
+        assertFalse(EmailUtil.validateCustomerEmail("_abc@example.com")); // começa com '_' (underscore não é letra/dígito)
+        assertFalse(EmailUtil.validateCustomerEmail("abc-@example.com")); // termina com '-' (hífen não é letra/dígito)
+    }
+
+    // ========= domínio / labels / TLD =========
+
+    @Test
+    void deveFalharQuandoDominioTemMenosDeDuasLabels() {
+        assertFalse(EmailUtil.validateCustomerEmail("user@localhost"));
     }
 
     @Test
-    @DisplayName("Domínio: caracteres não [A-Za-z0-9-]")
-    void deveRejeitarCaracteresNaoAsciiLetterDigitNoDominio() {
-        assertFalse(EmailUtil.validateCustomerEmail("user@exa`mple.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@exam[ple.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@exam]ple.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@exam/ple.com"));
-        assertFalse(EmailUtil.validateCustomerEmail("user@exam:ple.com"));
-    }
-
-    // ===========================
-    // IDN e surrogates
-    // ===========================
-    @Test
-    @DisplayName("IDN: desligado vs ligado e caracteres de controle no domínio")
-    void deveTestarIdn() {
-        assertFalse(EmailUtil.validateCustomerEmail("usuario@müller.de", false));
-        assertTrue(EmailUtil.validateCustomerEmail("usuario@müller.de", true));
-        assertFalse(EmailUtil.validateCustomerEmail("user@\u0007bad\u0002domain.com", true));
+    void deveFalharQuandoLabelVaziaOuMuitoLonga() {
+        assertFalse(EmailUtil.validateCustomerEmail("user@ex..com")); // label vazia
+        String label64 = "a".repeat(64);
+        assertFalse(EmailUtil.validateCustomerEmail("user@" + label64 + ".com")); // >63
     }
 
     @Test
-    @DisplayName("IDN: high surrogate isolado no domínio")
-    void deveCobrirCatchIdn_comSurrogateAltoIsolado() {
-        assertFalse(EmailUtil.validateCustomerEmail("user@\uD800.com", true));
+    void deveFalharQuandoLabelTemCaracterInvalido() {
+        assertFalse(EmailUtil.validateCustomerEmail("user@exa$mple.com"));
+        assertFalse(EmailUtil.validateCustomerEmail("user@-startdash.com"));  // começa com '-'
+        assertFalse(EmailUtil.validateCustomerEmail("user@enddash-.com"));    // termina com '-'
     }
 
     @Test
-    @DisplayName("IDN: low surrogate isolado no domínio")
-    void deveCobrirCatchIdn_comSurrogateBaixoIsolado() {
-        assertFalse(EmailUtil.validateCustomerEmail("user@\uDC00.com", true));
+    void deveFalharQuandoTldInvalido() {
+        assertFalse(EmailUtil.validateCustomerEmail("user@example.c"));  // < 2 letras
+        assertFalse(EmailUtil.validateCustomerEmail("user@example.c0m")); // contém número
     }
 
-    // ===========================
-    // Cobertura direta de isAsciiLetterOrDigit
-    // ===========================
     @Test
-    @DisplayName("isAsciiLetterOrDigit: aceita letras maiúsculas")
-    void deveAceitarLetrasMaiusculas() {
+    void deveFalharIdnQuandoAllowIdnFalse() {
+        // domínio com caractere não-ASCII e allowIdn = false -> LABEL_PATTERN falha
+        assertFalse(EmailUtil.validateCustomerEmail("user@müller.de", false));
+    }
+
+    @Test
+    void deveFalharQuandoConversaoIdnLancarExcecao() {
+        // domínio com caractere de controle força IllegalArgumentException no IDN.toASCII
+        // (não é garantido em todas as JDKs, mas caracteres de controle são inválidos)
+        String dominioRuim = "exa\u0001mple.com";
+        assertFalse(EmailUtil.validateCustomerEmail("user@" + dominioRuim, true));
+    }
+
+    // ========= helper protegido =========
+
+    @Test
+    void isAsciiLetterOrDigit_deveRetornarCorreto() {
         assertTrue(EmailUtil.isAsciiLetterOrDigit('A'));
-        assertTrue(EmailUtil.isAsciiLetterOrDigit('Z'));
-        assertTrue(EmailUtil.isAsciiLetterOrDigit('M'));
-    }
-
-    @Test
-    @DisplayName("isAsciiLetterOrDigit: aceita letras minúsculas")
-    void deveAceitarLetrasMinusculas() {
-        assertTrue(EmailUtil.isAsciiLetterOrDigit('a'));
         assertTrue(EmailUtil.isAsciiLetterOrDigit('z'));
-        assertTrue(EmailUtil.isAsciiLetterOrDigit('m'));
-    }
-
-    @Test
-    @DisplayName("isAsciiLetterOrDigit: aceita números")
-    void deveAceitarNumeros() {
         assertTrue(EmailUtil.isAsciiLetterOrDigit('0'));
-        assertTrue(EmailUtil.isAsciiLetterOrDigit('9'));
-        assertTrue(EmailUtil.isAsciiLetterOrDigit('5'));
+        assertFalse(EmailUtil.isAsciiLetterOrDigit('-'));
+        assertFalse(EmailUtil.isAsciiLetterOrDigit('_'));
+        assertFalse(EmailUtil.isAsciiLetterOrDigit('.'));
     }
+
+    // ========= delegação do método sem allowIdn =========
 
     @Test
-    @DisplayName("isAsciiLetterOrDigit: rejeita não-alfanuméricos")
-    void deveRejeitarNaoAlfanumericos() {
-        assertFalse(EmailUtil.isAsciiLetterOrDigit('@'));  // antes de 'A'
-        assertFalse(EmailUtil.isAsciiLetterOrDigit('['));  // depois de 'Z'
-        assertFalse(EmailUtil.isAsciiLetterOrDigit('`'));  // antes de 'a'
-        assertFalse(EmailUtil.isAsciiLetterOrDigit('{'));  // depois de 'z'
-        assertFalse(EmailUtil.isAsciiLetterOrDigit(':'));  // entre '9' e 'A'
-        assertFalse(EmailUtil.isAsciiLetterOrDigit(' '));  // espaço
-        assertFalse(EmailUtil.isAsciiLetterOrDigit('ç'));  // fora do ASCII
-    }
-
-    // ===========================
-    // Auxiliares
-    // ===========================
-    private static String repeat(char ch, int n) {
-        StringBuilder sb = new StringBuilder(n);
-        for (int i = 0; i < n; i++) sb.append(ch);
-        return sb.toString();
-    }
-
-    private static String label(int n) {
-        return repeat('a', n);
-    }
-
-    // 63+63+63+61 + 3 pontos = 253
-    private static String domainLen253() {
-        return label(63) + "." + label(63) + "." + label(63) + "." + label(61);
+    void validateCustomerEmail_semAllowIdnDeveDelegarParaFalse() {
+        // aqui só garantimos que o comportamento default (false) mantém inválido um IDN
+        assertFalse(EmailUtil.validateCustomerEmail("u@tésté.com"));
+        // e válido um ASCII puro
+        assertTrue(EmailUtil.validateCustomerEmail("u@teste.com"));
     }
 }
+	

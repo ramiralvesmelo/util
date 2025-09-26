@@ -1,41 +1,37 @@
 package br.com.ramiralvesmelo.util.core.exception;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-
-import br.com.ramiralvesmelo.util.core.exception.BusinessException;
 
 class BusinessExceptionTest {
 
     @Test
-    @DisplayName("Construtor simples define BAD_REQUEST por padrão")
-    void defaultStatusIsBadRequest() {
-        BusinessException ex = new BusinessException("erro");
-        assertEquals("erro", ex.getMessage());
+    void deveCriarComMensagemEStatusPadrao() {
+        BusinessException ex = new BusinessException("erro-padrao");
+        assertEquals("erro-padrao", ex.getMessage());
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
     }
 
     @Test
-    @DisplayName("Construtor com status customizado deve refletir o status")
-    void customStatusIsApplied() {
-        BusinessException ex = new BusinessException("conflito", HttpStatus.CONFLICT);
-        assertEquals("conflito", ex.getMessage());
+    void deveCriarComMensagemEStatusCustom() {
+        BusinessException ex = new BusinessException("erro-custom", HttpStatus.CONFLICT);
+        assertEquals("erro-custom", ex.getMessage());
         assertEquals(HttpStatus.CONFLICT, ex.getStatus());
     }
 
     @Test
-    @DisplayName("Factories conflict/notFound devem retornar os HttpStatus corretos")
-    void factoriesWork() {
-        BusinessException c = BusinessException.conflict("x");
-        BusinessException n = BusinessException.notFound("y");
+    void atalhoConflict() {
+        BusinessException ex = BusinessException.conflict("msg");
+        assertEquals("msg", ex.getMessage());
+        assertEquals(HttpStatus.CONFLICT, ex.getStatus());
+    }
 
-        assertEquals(HttpStatus.CONFLICT, c.getStatus());
-        assertEquals("x", c.getMessage());
-
-        assertEquals(HttpStatus.NOT_FOUND, n.getStatus());
-        assertEquals("y", n.getMessage());
+    @Test
+    void atalhoNotFound() {
+        BusinessException ex = BusinessException.notFound("nao achei");
+        assertEquals("nao achei", ex.getMessage());
+        assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
     }
 }

@@ -1,153 +1,120 @@
 package br.com.ramiralvesmelo.util.data.jpa;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import br.com.ramiralvesmelo.util.data.jpa.BaseRepository;
-import br.com.ramiralvesmelo.util.data.jpa.BaseRepositoryImpl;
+import br.com.ramiralvesmelo.util.commons.dto.OrderItemDto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 
-/**
- * Cobertura completa (mockada) para BaseRepositoryImpl.
- */
-@ExtendWith(MockitoExtension.class)
 class BaseRepositoryImplTest {
 
-    // ==========
-    // Suporte
-    // ==========
-    static class TestEntity {
-        Long id;
-        String nome;
+    private EntityManager em;
+    private CriteriaBuilder cb;
 
-        TestEntity() {}
-        TestEntity(Long id, String nome) { this.id = id; this.nome = nome; }
-
-        public Long getId() { return id; }
-        public String getNome() { return nome; }
-        public void setId(Long id) { this.id = id; }
-        public void setNome(String nome) { this.nome = nome; }
-    }
-
-    static class TestRepo extends BaseRepositoryImpl<TestEntity, Long> implements BaseRepository<TestEntity, Long> {
-        void setEntityManager(EntityManager em) { this.entityManager = em; }
-    }
-
-    private TestRepo repo;
-
-    @Mock private EntityManager em;
-
-    // Mocks para findAll
-    @Mock private CriteriaBuilder cb;
-    @Mock private CriteriaQuery<TestEntity> cqEntity;
-    @Mock private Root<TestEntity> rootEntity;
-    @Mock private TypedQuery<TestEntity> typedQueryEntity;
-
-    // Mocks para count
-    @Mock private CriteriaQuery<Long> cqLong;
-    @Mock private Root<TestEntity> rootCount;
-    @Mock private TypedQuery<Long> typedQueryLong;
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private BaseRepositoryImpl<OrderItemDto, Long> repo;
 
     @BeforeEach
-    void setup() {
-        repo = new TestRepo();
-        repo.setEntityManager(em);
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void setUp() throws Exception {
+        em = mock(EntityManager.class);
+        cb = mock(CriteriaBuilder.class);
+
+        // Cria subclasse anônima só no teste para fixar o tipo genérico T=OrderItemDto
+        repo = new BaseRepositoryImpl<OrderItemDto, Long>() {};
+
+        // Injeta o EntityManager no campo @PersistenceContext via reflexão
+        Field f = BaseRepositoryImpl.class.getDeclaredField("entityManager");
+        f.setAccessible(true);
+        f.set(repo, em);
     }
 
     @Test
-    @DisplayName("save() deve delegar para entityManager.merge e retornar a entidade gerenciada")
-    void save_ok() {
-        TestEntity detached = new TestEntity(1L, "a");
-        TestEntity managed = new TestEntity(1L, "a*managed*");
+    void save_deveChamarMergeERetornarEntidade() {
+        OrderItemDto in = OrderItemDto.builder().id(1L).productName("A").build();
+        OrderItemDto merged = in.toBuilder().productName("B").build();
 
-        when(em.merge(detached)).thenReturn(managed);
+        when(em.merge(in)).thenReturn(merged);
 
-        TestEntity out = repo.save(detached);
+        OrderItemDto out = repo.save(in);
 
         assertNotNull(out);
-        assertEquals("a*managed*", out.getNome());
-        verify(em).merge(detached);
+        assertEquals("B", out.getProductName());
+        verify(em).merge(in);
+        verifyNoMoreInteractions(em);
     }
 
     @Test
-    @DisplayName("findById() deve retornar Optional presente quando existir")
-    void findById_exists() {
-        TestEntity e = new TestEntity(10L, "x");
-        when(em.find(TestEntity.class, 10L)).thenReturn(e);
+    void findById_quandoExiste_deveRetornarOptionalComValor() {
+        OrderItemDto obj = OrderItemDto.builder().id(10L).build();
+        when(em.find(OrderItemDto.class, 10L)).thenReturn(obj);
 
-        Optional<TestEntity> opt = repo.findById(10L);
+        Optional<OrderItemDto> opt = repo.findById(10L);
 
         assertTrue(opt.isPresent());
-        assertEquals("x", opt.get().getNome());
-        verify(em).find(TestEntity.class, 10L);
+        assertEquals(10L, opt.get().getId());
+        verify(em).find(OrderItemDto.class, 10L);
+        verifyNoMoreInteractions(em);
     }
 
     @Test
-    @DisplayName("findById() deve retornar Optional vazio quando não existir")
-    void findById_notExists() {
-        when(em.find(TestEntity.class, 99L)).thenReturn(null);
+    void findById_quandoNaoExiste_deveRetornarOptionalVazio() {
+        when(em.find(OrderItemDto.class, 999L)).thenReturn(null);
 
-        Optional<TestEntity> opt = repo.findById(99L);
+        Optional<OrderItemDto> opt = repo.findById(999L);
 
         assertTrue(opt.isEmpty());
-        verify(em).find(TestEntity.class, 99L);
+        verify(em).find(OrderItemDto.class, 999L);
+        verifyNoMoreInteractions(em);
     }
 
     @Test
-    @DisplayName("findAll() deve montar Criteria API e retornar lista")
-    void findAll_ok() {
-        // Stubs do pipeline Criteria -> Query -> Result
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void findAll_deveUsarCriteriaApiEListar() {
+        CriteriaQuery cq = mock(CriteriaQuery.class);          // raw para simplificar
+        Root root = mock(Root.class);
+        TypedQuery typedQuery = mock(TypedQuery.class);
+
         when(em.getCriteriaBuilder()).thenReturn(cb);
+        when(cb.createQuery(OrderItemDto.class)).thenReturn(cq);
+        when(cq.from(OrderItemDto.class)).thenReturn(root);
+        when(cq.select(root)).thenReturn(cq);
+        when(em.createQuery(cq)).thenReturn(typedQuery);
 
-        when(cb.createQuery(TestEntity.class)).thenReturn(cqEntity);
-        when(cqEntity.from(TestEntity.class)).thenReturn(rootEntity);
-        // select precisa retornar o próprio cq
-        when(cqEntity.select(any())).thenReturn(cqEntity);
+        OrderItemDto a = OrderItemDto.builder().id(1L).build();
+        OrderItemDto b = OrderItemDto.builder().id(2L).build();
+        when(typedQuery.getResultList()).thenReturn(List.of(a, b));
 
-        when(em.createQuery(cqEntity)).thenReturn(typedQueryEntity);
-        when(typedQueryEntity.getResultList()).thenReturn(List.of(
-                new TestEntity(1L, "a"),
-                new TestEntity(2L, "b")
-        ));
+        List<OrderItemDto> res = repo.findAll();
 
-        List<TestEntity> all = repo.findAll();
-
-        assertEquals(2, all.size());
-        assertEquals("a", all.get(0).getNome());
-        assertEquals("b", all.get(1).getNome());
+        assertEquals(2, res.size());
+        assertEquals(1L, res.get(0).getId());
+        assertEquals(2L, res.get(1).getId());
 
         verify(em).getCriteriaBuilder();
-        verify(cb).createQuery(TestEntity.class);
-        verify(cqEntity).from(TestEntity.class);
-        verify(cqEntity).select(any());
-        verify(em).createQuery(cqEntity);
-        verify(typedQueryEntity).getResultList();
+        verify(cb).createQuery(OrderItemDto.class);
+        verify(cq).from(OrderItemDto.class);
+        verify(cq).select(root);
+        verify(em).createQuery(cq);
+        verify(typedQuery).getResultList();
+        verifyNoMoreInteractions(em, cb, cq, root, typedQuery);
     }
 
     @Test
-    @DisplayName("delete() deve remover entidade quando já está gerenciada (contains=true)")
-    void delete_whenManaged() {
-        TestEntity e = new TestEntity(5L, "managed");
+    void delete_quandoEntityManagerContemEntidade_deveRemoverDireto() {
+        OrderItemDto e = OrderItemDto.builder().id(3L).build();
 
         when(em.contains(e)).thenReturn(true);
 
@@ -155,80 +122,82 @@ class BaseRepositoryImplTest {
 
         verify(em).contains(e);
         verify(em).remove(e);
-        verify(em, never()).merge(any());
+        verifyNoMoreInteractions(em);
     }
 
     @Test
-    @DisplayName("delete() deve fazer merge antes de remover quando está destacada (contains=false)")
-    void delete_whenDetached() {
-        TestEntity detached = new TestEntity(6L, "detached");
-        TestEntity managed = new TestEntity(6L, "managed");
+    void delete_quandoEntityManagerNaoContem_deveMergeAntesDeRemover() {
+        OrderItemDto e = OrderItemDto.builder().id(4L).productName("X").build();
+        OrderItemDto merged = e.toBuilder().productName("X-merged").build();
 
-        when(em.contains(detached)).thenReturn(false);
-        when(em.merge(detached)).thenReturn(managed);
+        when(em.contains(e)).thenReturn(false);
+        when(em.merge(e)).thenReturn(merged);
 
-        repo.delete(detached);
+        repo.delete(e);
 
-        verify(em).contains(detached);
-        verify(em).merge(detached);
-        verify(em).remove(managed);
-    }
-
-    @Test
-    @DisplayName("deleteById() deve encontrar e remover quando existir")
-    void deleteById_exists() {
-        TestEntity e = new TestEntity(7L, "will-delete");
-
-        // findById -> em.find
-        when(em.find(TestEntity.class, 7L)).thenReturn(e);
-        // delete -> contains true para cair no remove direto
-        when(em.contains(e)).thenReturn(true);
-
-        repo.deleteById(7L);
-
-        verify(em).find(TestEntity.class, 7L);
         verify(em).contains(e);
-        verify(em).remove(e);
+        verify(em).merge(e);
+        verify(em).remove(merged);
+        verifyNoMoreInteractions(em);
     }
 
     @Test
-    @DisplayName("deleteById() não deve fazer nada quando não existir")
-    void deleteById_notExists() {
-        when(em.find(TestEntity.class, 404L)).thenReturn(null);
+    void deleteById_quandoExiste_deveRemover() {
+        OrderItemDto found = OrderItemDto.builder().id(5L).build();
 
-        repo.deleteById(404L);
+        when(em.find(OrderItemDto.class, 5L)).thenReturn(found);
+        when(em.contains(found)).thenReturn(true);
 
-        verify(em).find(TestEntity.class, 404L);
-        verify(em, never()).remove(any());
+        repo.deleteById(5L);
+
+        verify(em).find(OrderItemDto.class, 5L);
+        verify(em).contains(found);
+        verify(em).remove(found);
+        verifyNoMoreInteractions(em);
     }
 
     @Test
-    @DisplayName("existsById() deve retornar true/false conforme findById()")
-    void existsById_ok() {
-        when(em.find(TestEntity.class, 1L)).thenReturn(new TestEntity(1L, "a"));
-        when(em.find(TestEntity.class, 2L)).thenReturn(null);
+    void deleteById_quandoNaoExiste_naoChamaRemove() {
+        when(em.find(OrderItemDto.class, 777L)).thenReturn(null);
 
-        assertTrue(repo.existsById(1L));
-        assertFalse(repo.existsById(2L));
+        repo.deleteById(777L);
 
-        verify(em).find(TestEntity.class, 1L);
-        verify(em).find(TestEntity.class, 2L);
+        verify(em).find(OrderItemDto.class, 777L);
+        verifyNoMoreInteractions(em);
     }
 
     @Test
-    @DisplayName("count() deve usar Criteria API e retornar total")
-    void count_ok() {
+    void existsById_trueQuandoEncontrado_falseQuandoNao() {
+        OrderItemDto obj = OrderItemDto.builder().id(9L).build();
+
+        when(em.find(OrderItemDto.class, 9L)).thenReturn(obj);
+        assertTrue(repo.existsById(9L));
+
+        // reset para cenário false
+        reset(em);
+        when(em.find(OrderItemDto.class, 9L)).thenReturn(null);
+        assertFalse(repo.existsById(9L));
+    }
+
+    @Test
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void count_deveUsarCriteriaApiEretornarValor() {
+        CriteriaQuery<Long> cqLong = mock(CriteriaQuery.class);
+        Root root = mock(Root.class);
+        // ✅ count() retorna Expression<Long>
+        jakarta.persistence.criteria.Expression<Long> exprCount = mock(jakarta.persistence.criteria.Expression.class);
+        TypedQuery<Long> typedQuery = mock(TypedQuery.class);
+
         when(em.getCriteriaBuilder()).thenReturn(cb);
-
-        // createQuery(Long)
         when(cb.createQuery(Long.class)).thenReturn(cqLong);
+        when(cqLong.from(OrderItemDto.class)).thenReturn(root);
 
-        // from(entityClass) e select(count(...)) precisam retornar o próprio cqLong
-        when(cqLong.from(TestEntity.class)).thenReturn(rootCount);
-        when(cqLong.select(any())).thenReturn(cqLong);
+        // ✅ ajustar para Expression<Long>
+        when(cb.count(any())).thenReturn(exprCount);
+        when(cqLong.select(exprCount)).thenReturn(cqLong);
 
-        when(em.createQuery(cqLong)).thenReturn(typedQueryLong);
-        when(typedQueryLong.getSingleResult()).thenReturn(5L);
+        when(em.createQuery(cqLong)).thenReturn(typedQuery);
+        when(typedQuery.getSingleResult()).thenReturn(5L);
 
         long total = repo.count();
 
@@ -236,9 +205,12 @@ class BaseRepositoryImplTest {
 
         verify(em).getCriteriaBuilder();
         verify(cb).createQuery(Long.class);
-        verify(cqLong).from(TestEntity.class);
-        verify(cqLong).select(any());
+        verify(cqLong).from(OrderItemDto.class);
+        verify(cb).count(any());
+        verify(cqLong).select(exprCount);
         verify(em).createQuery(cqLong);
-        verify(typedQueryLong).getSingleResult();
+        verify(typedQuery).getSingleResult();
+        verifyNoMoreInteractions(em, cb, cqLong, root, typedQuery, exprCount);
     }
+
 }

@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @UtilityClass
 public class AuditLogPublisher {
-
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**

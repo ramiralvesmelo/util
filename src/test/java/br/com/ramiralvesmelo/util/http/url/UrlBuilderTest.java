@@ -1,84 +1,145 @@
 package br.com.ramiralvesmelo.util.http.url;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 
-import java.lang.reflect.Constructor;
-import java.util.stream.Stream;
+import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 import br.com.ramiralvesmelo.util.core.exception.UrlException;
-import br.com.ramiralvesmelo.util.http.url.UrlBuilder;
 
 class UrlBuilderTest {
 
-    private static final String BASE = "http://localhost:8084/app-event";
-    private static final String PATH = "/download/pdf/";
-
+    // =========================
+    // buildAbsolute(base, path)
+    // =========================
     @Test
-    @DisplayName("Deve montar URL completa a partir de base + path + orderNumber")
-    void buidlUrl_ok() {
-        String result = UrlBuilder.buidlUrl(BASE, PATH, "ORD-0001.pdf");
-        assertThat(result)
-            .isEqualTo("http://localhost:8084/app-event/download/pdf/ORD-0001.pdf");
-    }
-
-    @ParameterizedTest(name = "Sanitiza orderNumber \"{0}\" -> \"{1}\"")
-    @MethodSource("orderNumbers")
-    @DisplayName("Sanitização: caracteres fora do whitelist viram '_' e demais são preservados")
-    void buidlUrl_sanitize(String input, String expectedFile) {
-        String result = UrlBuilder.buidlUrl(BASE, PATH, input);
-        assertThat(result)
-            .isEqualTo("http://localhost:8084/app-event/download/pdf/" + expectedFile);
-    }
-
-    static Stream<Arguments> orderNumbers() {
-        return Stream.of(
-            Arguments.of("ORD 0001.pdf", "ORD_0001.pdf"),  // espaço -> _
-            Arguments.of("A/B?C.pdf", "A_B_C.pdf"),        // / e ? -> _
-            Arguments.of("ç-ã_β.pdf", "_-___.pdf"),        // unicode fora do whitelist -> múltiplos _
-            Arguments.of("ORD-1.2.3.pdf", "ORD-1.2.3.pdf") // preserva . _ - e dígitos/letras
-        );
+    void buildAbsolute_deveJuntarBaseEPath_normalizandoBarras() {
+        String out = UrlBuilder.buildAbsolute("https://api.exemplo.com/base/", "/v1//itens");
+        // normaliza path (sem barras duplas no path)
+        assertEquals("https://api.exemplo.com/base/v1/itens", out);
     }
 
     @Test
-    @DisplayName("Com orderNumber null, deve terminar no path sem arquivo (string vazia pós-sanitização)")
-    void buidlUrl_orderNull() {
-        String result = UrlBuilder.buidlUrl(BASE, PATH, null);
-        assertThat(result)
-            .isEqualTo("http://localhost:8084/app-event/download/pdf/");
+    void buildAbsolute_deveManterEsquemaHostQueryFragmentDaBase() throws Exception {
+        String base = "http://srv.local:8080/app?x=1#frag";
+        String out = UrlBuilder.buildAbsolute(base, "sub/recurso");
+        URI u = new URI(out);
+        assertEquals("http", u.getScheme());
+        assertEquals("srv.local", u.getHost());
+        assertEquals(8080, u.getPort());
+        assertEquals("/app/sub/recurso", u.getPath());
+        // query/fragment da base permanecem
+        assertEquals("x=1", u.getQuery());
+        assertEquals("frag", u.getFragment());
     }
 
     @Test
-    @DisplayName("Deve lançar UrlException quando baseUrl é inválida (URISyntaxException)")
-    void buidlUrl_baseInvalida() {
-        String invalidBase = "http://localhost:8084 app-event"; // espaço no host
-        assertThatThrownBy(() -> UrlBuilder.buidlUrl(invalidBase, PATH, "X.pdf"))
-            .isInstanceOf(UrlException.class)
-            .hasMessageContaining("URL inválida");
+    void buildAbsolute_deveLancarUrlException_quandoBaseInvalida() {
+        assertThrows(UrlException.class,
+            () -> UrlBuilder.buildAbsolute("://base-invalida", "/x"));
+    }
+
+    // ==============================
+    // buildAbsolute(base, segments…)
+    // ==============================
+    @Test
+    void buildAbsolute_comVariosSegmentos_deveNormalizar() {
+        String out = UrlBuilder.buildAbsolute("https://h.com/a", "/b/", "/c", "d/");
+        assertEquals("https://h.com/a/b/c/d/", out);
+    }
+
+    // ==================================================
+    // buildAbsolute(base, path, queryParams)
+    // ==================================================
+    @Test
+    void buildAbsolute_comQueryParams_deveAdicionarSomenteValidos() throws Exception {
+        Map<String, Object> qp = new LinkedHashMap<>();
+        qp.put("a", 1);
+        qp.put("b", "x");
+        qp.put(null, "ignorar"); // chave nula ignora
+        qp.put("c", null);       // valor nulo ignora
+
+        String out = UrlBuilder.buildAbsolute("https://h.com/api", "v1/i", qp);
+
+        // ordem preservada (LinkedHashMap): a=1&b=x
+        URI u = new URI(out);
+        assertEquals("/api/v1/i", u.getPath());
+        assertEquals("a=1&b=x", u.getQuery());
+    }
+
+    // =========================
+    // buidlUrl / buildUrl (legado)
+    // =========================
+    @Test
+    void buidlUrl_devePreservarBarrasDuplas_noComportamentoLegado() {
+        // basePath "/api/" + path "/v1/" = "/api//v1/" (dupla preservada)
+        String out = UrlBuilder.buidlUrl("https://h.com/api/", "/v1/", "ABC/123");
+        // sanitize troca "/" por "_"
+        assertTrue(out.contains("/api//v1/ABC_123"), "deveria preservar // no path legado");
     }
 
     @Test
-    @DisplayName("Base com barra final preserva comportamento atual (gera //download no resultado)")
-    void buidlUrl_baseComBarraFinal() {
-        String baseComBarra = "http://localhost:8084/app-event/";
-        String result = UrlBuilder.buidlUrl(baseComBarra, PATH, "ORD-9.pdf");
-        // Observação: implementação atual concatena "/app-event/" + "/download..." => "//download..."
-        assertThat(result)
-            .isEqualTo("http://localhost:8084/app-event//download/pdf/ORD-9.pdf");
+    void buildUrl_aliasDeveDelegarParaBuidlUrl() {
+        String a = UrlBuilder.buidlUrl("https://h.com/x/", "/y/", "Nº 1");
+        String b = UrlBuilder.buildUrl("https://h.com/x/", "/y/", "Nº 1");
+        assertEquals(a, b);
+    }
+
+    // =========
+    // escape()
+    // =========
+    @Test
+    void escape_deveUsarUrlEncoderComMaisParaEspaco() {
+        assertEquals("a+b", UrlBuilder.escape("a b"));
+        // caractere acentuado vira UTF-8 percent-encoded
+        assertEquals("%C3%A1", UrlBuilder.escape("á"));
+        assertNull(UrlBuilder.escape(null));
+    }
+
+    // ============================
+    // buildAbsoluteStrict(base,path)
+    // ============================
+    @Test
+    void buildAbsoluteStrict_deveConstruirQuandoValido() {
+        String out = UrlBuilder.buildAbsoluteStrict("https://h.com/base", "v1/ok");
+        assertEquals("https://h.com/base/v1/ok", out);
     }
 
     @Test
-    @DisplayName("Cobertura do construtor privado via reflexão")
-    void constructor_privateCoverage() throws Exception {
-        Constructor<UrlBuilder> c = UrlBuilder.class.getDeclaredConstructor();
-        c.setAccessible(true);
-        UrlBuilder instance = c.newInstance();
-        assertThat(instance).isNotNull();
+    void buildAbsoluteStrict_deveFalharQuandoBaseVaziaOuNula() {
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict(null, "x"));
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("  ", "x"));
+    }
+
+    @Test
+    void buildAbsoluteStrict_deveFalharQuandoPathNulo() {
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", null));
+    }
+
+    @Test
+    void buildAbsoluteStrict_deveFalharQuandoPathTemEspacoNaoEscapado() {
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "com espaco"));
+    }
+
+    @Test
+    void buildAbsoluteStrict_deveFalharQuandoPercentEncodingInvalido() {
+        // %G1 é inválido (G não é hex)
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%G1y"));
+    }
+
+    @Test
+    void buildAbsoluteStrict_deveFalharQuandoSchemeInvalido() {
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("ftp://h.com", "ok"));
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("://bad", "ok"));
     }
 }

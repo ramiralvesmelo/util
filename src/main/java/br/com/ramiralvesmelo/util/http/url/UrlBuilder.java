@@ -140,4 +140,43 @@ public final class UrlBuilder {
         if (s == null) return null;
         return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
     }
+    
+    /** Versão estrita: valida entradas e lança IllegalArgumentException para casos inválidos. */
+    public static String buildAbsoluteStrict(String baseUrl, String path) {
+        // validações rápidas que provocam erros reveladores
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalArgumentException("baseUrl vazio/nulo");
+        }
+        if (path == null) {
+            throw new IllegalArgumentException("path nulo");
+        }
+        // espaços não escapados e % inválido (não-hex) são tratados como inválidos
+        if (path.indexOf(' ') >= 0 || path.matches(".*%([^0-9A-Fa-f].*|$).*")) {
+            throw new IllegalArgumentException("path inválido (espaços não escapados ou percent-encoding inválido)");
+        }
+
+        try {
+            URI base = new URI(baseUrl);
+            String scheme = base.getScheme();
+            if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+                throw new IllegalArgumentException("scheme inválido: " + scheme);
+            }
+
+            // Monta como a versão normal, mas recusa '//' redundante no PATH final
+            String joined   = joinPaths(safe(base.getPath()), path);
+            String normPath = normalizePath(joined);
+            if (normPath.contains("//")) {
+                throw new IllegalArgumentException("path normalizado contém '//' redundante");
+            }
+
+            return new org.apache.hc.core5.net.URIBuilder(base)
+                    .setPath(normPath)
+                    .build()
+                    .toString();
+        } catch (URISyntaxException e) {
+            // converte para IAE para ser classificado como erro pelo Randoop (ERROR)
+            throw new IllegalArgumentException("URL base inválida: " + baseUrl, e);
+        }
+    }
+    
 }
