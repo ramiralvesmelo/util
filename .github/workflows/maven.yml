@@ -85,7 +85,7 @@ jobs:
 
       - name: "📈 Codecov — Enviar cobertura"
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}           # obrigatório p/ repo privado
           files: ${{ env.JACOCO_REPORT_GLOB }}
@@ -125,7 +125,7 @@ jobs:
 
       - name: "📊 Dependabot/Dependency Graph — Snapshot Maven"
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-        uses: advanced-security/maven-dependency-submission-action@v4
+        uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
