@@ -32,8 +32,10 @@ public final class RestHttpClient {
     private RestHttpClient() {}
 
     private static final AtomicReference<RestTemplate> REF = new AtomicReference<>();
-    private static volatile String baseUrl = "";
-    private static volatile Supplier<String> bearerSupplier = () -> null;
+    // ⬇️ trocados por AtomicReference (thread-safe)
+    private static final AtomicReference<String> BASE_URL = new AtomicReference<>("");
+    private static final AtomicReference<Supplier<String>> BEARER_SUPPLIER =
+            new AtomicReference<>(() -> null);
 
     public static final class Cfg {
         public String baseUrl;
@@ -41,7 +43,7 @@ public final class RestHttpClient {
         public Duration readTimeout = Duration.ofSeconds(5);
         /** retorna "Bearer xxx" ou só o token */
         public Supplier<String> bearerSupplier;
-        public List<ClientHttpRequestInterceptor> extraInterceptors = List.of();
+        public List<org.springframework.http.client.ClientHttpRequestInterceptor> extraInterceptors = List.of();
         /** pool (opcional) */
         public int maxTotal = 200;
         public int maxPerRoute = 50;
@@ -49,21 +51,21 @@ public final class RestHttpClient {
 
     public static void init(Cfg cfg) {
         Objects.requireNonNull(cfg, "cfg");
-        baseUrl = cfg.baseUrl != null ? cfg.baseUrl : "";
+        BASE_URL.set(cfg.baseUrl != null ? cfg.baseUrl : "");
 
-        // 1) connect timeout no ConnectionConfig (sem deprecated)
+        // 1) connect timeout
         ConnectionConfig connConfig = ConnectionConfig.custom()
                 .setConnectTimeout(Timeout.ofMilliseconds(cfg.connectTimeout.toMillis()))
                 .build();
 
-        // 2) connection manager + pool
+        // 2) pool
         PoolingHttpClientConnectionManager cm = PoolingHttpClientConnectionManagerBuilder.create()
                 .setDefaultConnectionConfig(connConfig)
                 .build();
         cm.setMaxTotal(cfg.maxTotal);
         cm.setDefaultMaxPerRoute(cfg.maxPerRoute);
 
-        // 3) response timeout por requisição
+        // 3) response timeout
         RequestConfig requestConfig = RequestConfig.custom()
                 .setResponseTimeout(Timeout.ofMilliseconds(cfg.readTimeout.toMillis()))
                 .build();
@@ -77,7 +79,6 @@ public final class RestHttpClient {
 
         // 5) RequestFactory
         HttpComponentsClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
-        // compat: algumas versões do Spring ainda usam int aqui
         rf.setConnectTimeout((int) cfg.connectTimeout.toMillis());
         rf.setReadTimeout((int) cfg.readTimeout.toMillis());
 
@@ -92,10 +93,11 @@ public final class RestHttpClient {
         rt.getMessageConverters().removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
         rt.getMessageConverters().add(0, jackson);
 
-        // 8) Interceptor Bearer
-        bearerSupplier = cfg.bearerSupplier != null ? cfg.bearerSupplier : () -> null;
+        // 8) Interceptor Bearer (consulta o supplier de forma atômica a cada requisição)
+        BEARER_SUPPLIER.set(cfg.bearerSupplier != null ? cfg.bearerSupplier : () -> null);
         ClientHttpRequestInterceptor auth = (req, body, ex) -> {
-            String token = bearerSupplier.get();
+            Supplier<String> sup = BEARER_SUPPLIER.get();
+            String token = sup != null ? sup.get() : null;
             if (token != null && !token.isBlank()) {
                 req.getHeaders().set(HttpHeaders.AUTHORIZATION,
                         token.startsWith("Bearer ") ? token : "Bearer " + token);
@@ -120,6 +122,7 @@ public final class RestHttpClient {
     }
 
     private static String url(String path) {
+        String baseUrl = BASE_URL.get(); // snapshot atômico
         if (path == null) return baseUrl;
         if (path.startsWith("http://") || path.startsWith("https://")) return path;
         if (baseUrl == null || baseUrl.isBlank()) return path;
@@ -129,7 +132,6 @@ public final class RestHttpClient {
     }
 
     // ==== helpers básicos (Class<T>) ====
-
     public static <T> T get(String path, Class<T> type) {
         return rt().getForObject(url(path), type);
     }
@@ -153,7 +155,6 @@ public final class RestHttpClient {
     }
 
     // ==== helpers tipados (ParameterizedTypeReference<R>) ====
-
     public static <R> R get(String path, ParameterizedTypeReference<R> typeRef) {
         ResponseEntity<R> resp = exchange(path, HttpMethod.GET, null, null, typeRef);
         return resp.getBody();
@@ -175,7 +176,6 @@ public final class RestHttpClient {
     }
 
     // ==== exchange genéricos ====
-
     public static <B, R> ResponseEntity<R> exchange(
             String path, HttpMethod method, B body, Class<R> responseType) {
         HttpEntity<B> entity = new HttpEntity<>(body);

@@ -14,11 +14,11 @@ public final class EmailUtil {
 
     private EmailUtil() {}
 
-    public static boolean validateCustomerEmail(String email) {
-        return validateCustomerEmail(email, false);
+    public static boolean verify(String email) {
+        return verify(email, false);
     }
 
-    public static boolean validateCustomerEmail(String email, boolean allowIdn) {
+    public static boolean verify(String email, boolean allowIdn) {
         log.debug("Validando e-mail: {}", email);
 
         if (email == null) {
