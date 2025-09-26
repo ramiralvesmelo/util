@@ -5,6 +5,9 @@ import java.util.regex.Pattern;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Tratado ReDoS (Regular Expression Denial of Service) por Backtracking 
+ */
 @Slf4j
 public final class EmailUtil {
 
