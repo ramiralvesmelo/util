@@ -28,6 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @Slf4j
 public class GlobalExceptionHandler {
+	
+	private static final String INVALID_PARAMETER_MESSAGE = "Parâmetro inválido.";
 
     private record ErrorResponse(
             String timestamp,
@@ -61,7 +63,7 @@ public class GlobalExceptionHandler {
         HttpStatus st = HttpStatus.BAD_REQUEST;
         log.error("[400] {} {} -> {}: {}", req.getMethod(), req.getRequestURI(),
                 ex.getClass().getSimpleName(), ex.getMessage());
-        return ResponseEntity.status(st).body(new ErrorResponse(st, "Parâmetro inválido.", req.getRequestURI()));
+        return ResponseEntity.status(st).body(new ErrorResponse(st, INVALID_PARAMETER_MESSAGE, req.getRequestURI()));
     }
 
     // 400 - JSON inválido
@@ -81,7 +83,7 @@ public class GlobalExceptionHandler {
         HttpStatus st = HttpStatus.BAD_REQUEST;
         log.error("[400] {} {} -> {}: {}", req.getMethod(), req.getRequestURI(),
                 ex.getClass().getSimpleName(), ex.getMessage());
-        return ResponseEntity.status(st).body(new ErrorResponse(st, "Parâmetro inválido.", req.getRequestURI()));
+        return ResponseEntity.status(st).body(new ErrorResponse(st, INVALID_PARAMETER_MESSAGE, req.getRequestURI()));
     }
 
     // 400 - bind em query/path (mismatch OU BindException)
@@ -90,7 +92,7 @@ public class GlobalExceptionHandler {
         HttpStatus st = HttpStatus.BAD_REQUEST;
         log.error("[400] {} {} -> {}: {}", req.getMethod(), req.getRequestURI(),
                 ex.getClass().getSimpleName(), ex.getMessage());
-        return ResponseEntity.status(st).body(new ErrorResponse(st, "Parâmetro inválido.", req.getRequestURI()));
+        return ResponseEntity.status(st).body(new ErrorResponse(st, INVALID_PARAMETER_MESSAGE, req.getRequestURI()));
     }
 
     // 400 - parâmetro obrigatório ausente
