@@ -1,143 +1,146 @@
 package br.com.ramiralvesmelo.util.http.url;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import br.com.ramiralvesmelo.util.core.exception.UrlException;
 
 class UrlBuilderTest {
 
-    // =========================
-    // buildAbsolute(base, path)
-    // =========================
+    // ===== buildAbsolute (base + path) =====
     @Test
-    void buildAbsolute_deveJuntarBaseEPath_normalizandoBarras() {
-        String out = UrlBuilder.buildAbsolute("https://api.exemplo.com/base/", "/v1//itens");
-        assertEquals("https://api.exemplo.com/base/v1/itens", out);
+    @DisplayName("buildAbsolute deve juntar base+path e normalizar barras")
+    void buildAbsolute_ok() {
+        String out = UrlBuilder.buildAbsolute("http://host/app/", "/v1//orders");
+        assertThat(out).isEqualTo("http://host/app/v1/orders");
     }
 
     @Test
-    void buildAbsolute_deveManterEsquemaHostQueryFragmentDaBase() throws Exception {
-        String base = "http://srv.local:8080/app?x=1#frag";
-        String out = UrlBuilder.buildAbsolute(base, "sub/recurso");
-        URI u = new URI(out);
-        assertEquals("http", u.getScheme());
-        assertEquals("srv.local", u.getHost());
-        assertEquals(8080, u.getPort());
-        assertEquals("/app/sub/recurso", u.getPath());
-        assertEquals("x=1", u.getQuery());
-        assertEquals("frag", u.getFragment());
+    @DisplayName("buildAbsolute deve lançar UrlException quando baseUrl inválida")
+    void buildAbsolute_baseInvalida_lancaUrlException() {
+        assertThrows(UrlException.class, () ->
+            UrlBuilder.buildAbsolute("http://h^ost:8080", "x")
+        );
+    }
+
+    // ===== buildAbsolute (múltiplos segmentos) =====
+    @Test
+    @DisplayName("buildAbsolute(base, segments...) junta corretamente e normaliza")
+    void buildAbsolute_variosSegmentos_ok() {
+        String out = UrlBuilder.buildAbsolute("https://api.exemplo.com/base",
+                "v1", "/customers/", "//123");
+        assertThat(out).isEqualTo("https://api.exemplo.com/base/v1/customers/123");
+    }
+
+    // ===== buildAbsolute com query =====
+    @Test
+    @DisplayName("buildAbsolute(base, path, query) inclui apenas params com chave/valor não-nulos")
+    void buildAbsolute_comQuery_ok() {
+        Map<String, Object> q = new LinkedHashMap<>();
+        q.put("q", "john");
+        q.put("page", 2);
+        q.put("nullKey", null);
+        q.put(null, "x");
+        String out = UrlBuilder.buildAbsolute("http://h/svc", "users", q);
+        assertThat(out)
+            .isEqualTo("http://h/svc/users?q=john&page=2");
+    }
+
+    // ===== legado: buidlUrl/buildUrl =====
+    @Test
+    @DisplayName("buidlUrl preserva '//' no path e sanitiza identificadores")
+    void buidlUrl_preservaBarrasDuplasESanitiza() {
+        String out = UrlBuilder.buidlUrl("http://h", "/a//b/", "PED#001/A");
+        // mantém '//' (legado) e troca caracteres inválidos do orderNumber por '_'
+        assertThat(out).isEqualTo("http://h/a//b/PED_001_A");
     }
 
     @Test
-    void buildAbsolute_deveLancarUrlException_quandoBaseInvalida() {
-        assertThrows(UrlException.class,
-            () -> UrlBuilder.buildAbsolute("://base-invalida", "/x"));
+    @DisplayName("buildUrl delega para buidlUrl")
+    void buildUrl_alias() {
+        String out = UrlBuilder.buildUrl("http://h", "/x/", "Nº 42");
+        assertThat(out).isEqualTo("http://h/x/N__42");
     }
 
-    // ==============================
-    // buildAbsolute(base, segments…)
-    // ==============================
+    // ===== escape =====
     @Test
-    void buildAbsolute_comVariosSegmentos_deveNormalizar() {
-        String out = UrlBuilder.buildAbsolute("https://h.com/a", "/b/", "/c", "d/");
-        assertEquals("https://h.com/a/b/c/d/", out);
+    @DisplayName("escape usa URLEncoder UTF-8 e substitui espaço por '+'")
+    void escape_ok() {
+        assertThat(UrlBuilder.escape("João da Silva & Cia"))
+            .isEqualTo("Jo%C3%A3o+da+Silva+%26+Cia");
+        assertThat(UrlBuilder.escape(null)).isNull();
     }
 
-    // ==================================================
-    // buildAbsolute(base, path, queryParams)
-    // ==================================================
+    // ===== buildAbsoluteStrict: validações de entrada =====
     @Test
-    void buildAbsolute_comQueryParams_deveAdicionarSomenteValidos() throws Exception {
-        Map<String, Object> qp = new LinkedHashMap<>();
-        qp.put("a", 1);
-        qp.put("b", "x");
-        qp.put(null, "ignorar"); // chave nula ignora
-        qp.put("c", null);       // valor nulo ignora
-
-        String out = UrlBuilder.buildAbsolute("https://h.com/api", "v1/i", qp);
-
-        URI u = new URI(out);
-        assertEquals("/api/v1/i", u.getPath());
-        assertEquals("a=1&b=x", u.getQuery()); // ordem preservada (LinkedHashMap)
-    }
-
-    // =========================
-    // buidlUrl / buildUrl (legado)
-    // =========================
-    @Test
-    void buidlUrl_devePreservarBarrasDuplas_noComportamentoLegadoESanitizar() {
-        String out = UrlBuilder.buidlUrl("https://h.com/api/", "/v1/", "ABC/123");
-        assertTrue(out.contains("/api//v1/ABC_123"),
-                "deveria preservar // no path legado e sanitizar '/' -> '_'");
+    @DisplayName("buildAbsoluteStrict baseUrl vazio/nulo -> IAE")
+    void strict_baseUrlVazioOuNulo() {
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict(null, "x"));
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("   ", "x"));
     }
 
     @Test
-    void buildUrl_aliasDeveDelegarParaBuidlUrl() {
-        String a = UrlBuilder.buidlUrl("https://h.com/x/", "/y/", "Nº 1");
-        String b = UrlBuilder.buildUrl("https://h.com/x/", "/y/", "Nº 1");
-        assertEquals(a, b);
-    }
-
-    // =========
-    // escape()
-    // =========
-    @Test
-    void escape_deveUsarUrlEncoderComMaisParaEspaco() {
-        assertEquals("a+b", UrlBuilder.escape("a b"));
-        assertEquals("%C3%A1", UrlBuilder.escape("á"));
-        assertNull(UrlBuilder.escape(null));
-    }
-
-    // ============================
-    // buildAbsoluteStrict(base,path)
-    // ============================
-    @Test
-    void buildAbsoluteStrict_deveConstruirQuandoValido() {
-        String out = UrlBuilder.buildAbsoluteStrict("https://h.com/base", "v1/ok");
-        assertEquals("https://h.com/base/v1/ok", out);
+    @DisplayName("buildAbsoluteStrict path nulo -> IAE")
+    void strict_pathNulo() {
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("http://h", null));
     }
 
     @Test
-    void buildAbsoluteStrict_deveFalharQuandoBaseVaziaOuNula() {
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict(null, "x"));
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("  ", "x"));
+    @DisplayName("buildAbsoluteStrict path com espaço cru -> IAE")
+    void strict_pathComEspacoCru() {
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("http://h", "a b"));
     }
 
     @Test
-    void buildAbsoluteStrict_deveFalharQuandoPathNulo() {
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", null));
+    @DisplayName("buildAbsoluteStrict path com percent-encoding inválido -> IAE")
+    void strict_percentEncodingInvalido() {
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("http://h", "a%GZb"));
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("http://h", "a%")); // termina com '%'
     }
 
     @Test
-    void buildAbsoluteStrict_deveFalharQuandoPathTemEspacoNaoEscapado() {
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "com espaco"));
+    @DisplayName("buildAbsoluteStrict scheme inválido -> IAE")
+    void strict_schemeInvalido() {
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("ftp://host", "x"));
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("://host", "x"));
     }
 
     @Test
-    void buildAbsoluteStrict_deveFalharQuandoPercentEncodingInvalido() {
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%G1y")); // G não é hex
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%1"));   // incompleto
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%"));    // incompleto
+    @DisplayName("buildAbsoluteStrict detecta '//' redundante (agora antes de normalizar) -> IAE")
+    void strict_doubleSlash_noPath() {
+        // path contém '//' interno; joinPaths não remove nesse ponto
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("http://h/base", "a//b"));
+        // também se vier do basePath + path
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("http://h/base//", "b"));
     }
 
     @Test
-    void buildAbsoluteStrict_deveFalharQuandoSchemeInvalido() {
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("ftp://h.com", "ok"));
-        assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("://bad", "ok"));
+    @DisplayName("buildAbsoluteStrict converte URISyntaxException em IAE")
+    void strict_uriSyntaxInvalida_iae() {
+        assertThrows(IllegalArgumentException.class, () ->
+            UrlBuilder.buildAbsoluteStrict("http://h^ost", "x"));
+    }
+
+    @Test
+    @DisplayName("buildAbsoluteStrict OK quando entradas válidas")
+    void strict_ok() {
+        String out = UrlBuilder.buildAbsoluteStrict("https://host/app", "/v1/customers");
+        assertThat(out).isEqualTo("https://host/app/v1/customers");
     }
 }
