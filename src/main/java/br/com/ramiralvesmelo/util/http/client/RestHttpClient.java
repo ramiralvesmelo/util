@@ -1,6 +1,7 @@
 package br.com.ramiralvesmelo.util.http.client;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,42 +33,99 @@ public final class RestHttpClient {
     private RestHttpClient() {}
 
     private static final AtomicReference<RestTemplate> REF = new AtomicReference<>();
-    // ⬇️ trocados por AtomicReference (thread-safe)
     private static final AtomicReference<String> BASE_URL = new AtomicReference<>("");
     private static final AtomicReference<Supplier<String>> BEARER_SUPPLIER =
             new AtomicReference<>(() -> null);
 
+    /** Configuração imutável com encapsulamento e validação via Builder. */
     public static final class Cfg {
-        public String baseUrl;
-        public Duration connectTimeout = Duration.ofSeconds(3);
-        public Duration readTimeout = Duration.ofSeconds(5);
+        private final String baseUrl;
+        private final Duration connectTimeout;
+        private final Duration readTimeout;
         /** retorna "Bearer xxx" ou só o token */
-        public Supplier<String> bearerSupplier;
-        public List<org.springframework.http.client.ClientHttpRequestInterceptor> extraInterceptors = List.of();
+        private final Supplier<String> bearerSupplier;
+        private final List<ClientHttpRequestInterceptor> extraInterceptors;
         /** pool (opcional) */
-        public int maxTotal = 200;
-        public int maxPerRoute = 50;
+        private final int maxTotal;
+        private final int maxPerRoute;
+
+        private Cfg(Builder b) {
+            this.baseUrl = b.baseUrl;
+            this.connectTimeout = b.connectTimeout;
+            this.readTimeout = b.readTimeout;
+            this.bearerSupplier = b.bearerSupplier;
+            this.extraInterceptors = List.copyOf(b.extraInterceptors); // cópia imutável
+            this.maxTotal = b.maxTotal;
+            this.maxPerRoute = b.maxPerRoute;
+        }
+
+        public String getBaseUrl() { return baseUrl; }
+        public Duration getConnectTimeout() { return connectTimeout; }
+        public Duration getReadTimeout() { return readTimeout; }
+        public Supplier<String> getBearerSupplier() { return bearerSupplier; }
+        public List<ClientHttpRequestInterceptor> getExtraInterceptors() { return extraInterceptors; }
+        public int getMaxTotal() { return maxTotal; }
+        public int getMaxPerRoute() { return maxPerRoute; }
+
+        public static Builder builder() { return new Builder(); }
+
+        public static final class Builder {
+            private String baseUrl = "";
+            private Duration connectTimeout = Duration.ofSeconds(3);
+            private Duration readTimeout = Duration.ofSeconds(5);
+            private Supplier<String> bearerSupplier = () -> null;
+            private List<ClientHttpRequestInterceptor> extraInterceptors = new ArrayList<>();
+            private int maxTotal = 200;
+            private int maxPerRoute = 50;
+
+            public Builder baseUrl(String v) { this.baseUrl = (v != null ? v : ""); return this; }
+            public Builder connectTimeout(Duration v) { this.connectTimeout = Objects.requireNonNull(v, "connectTimeout"); return this; }
+            public Builder readTimeout(Duration v) { this.readTimeout = Objects.requireNonNull(v, "readTimeout"); return this; }
+            public Builder bearerSupplier(Supplier<String> v) { this.bearerSupplier = (v != null ? v : () -> null); return this; }
+            public Builder extraInterceptors(List<ClientHttpRequestInterceptor> v) {
+                this.extraInterceptors = (v != null ? new ArrayList<>(v) : new ArrayList<>()); return this;
+            }
+            public Builder maxTotal(int v) { this.maxTotal = v; return this; }
+            public Builder maxPerRoute(int v) { this.maxPerRoute = v; return this; }
+
+            public Cfg build() {
+                if (connectTimeout.isNegative() || connectTimeout.isZero()) {
+                    throw new IllegalArgumentException("connectTimeout deve ser > 0");
+                }
+                if (readTimeout.isNegative() || readTimeout.isZero()) {
+                    throw new IllegalArgumentException("readTimeout deve ser > 0");
+                }
+                if (maxTotal <= 0) {
+                    throw new IllegalArgumentException("maxTotal deve ser > 0");
+                }
+                if (maxPerRoute <= 0) {
+                    throw new IllegalArgumentException("maxPerRoute deve ser > 0");
+                }
+                return new Cfg(this);
+            }
+        }
     }
 
+    /** Inicializa com configuração imutável. */
     public static void init(Cfg cfg) {
         Objects.requireNonNull(cfg, "cfg");
-        BASE_URL.set(cfg.baseUrl != null ? cfg.baseUrl : "");
+        BASE_URL.set(cfg.getBaseUrl() != null ? cfg.getBaseUrl() : "");
 
         // 1) connect timeout
         ConnectionConfig connConfig = ConnectionConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(cfg.connectTimeout.toMillis()))
+                .setConnectTimeout(Timeout.ofMilliseconds(cfg.getConnectTimeout().toMillis()))
                 .build();
 
         // 2) pool
         PoolingHttpClientConnectionManager cm = PoolingHttpClientConnectionManagerBuilder.create()
                 .setDefaultConnectionConfig(connConfig)
                 .build();
-        cm.setMaxTotal(cfg.maxTotal);
-        cm.setDefaultMaxPerRoute(cfg.maxPerRoute);
+        cm.setMaxTotal(cfg.getMaxTotal());
+        cm.setDefaultMaxPerRoute(cfg.getMaxPerRoute());
 
         // 3) response timeout
         RequestConfig requestConfig = RequestConfig.custom()
-                .setResponseTimeout(Timeout.ofMilliseconds(cfg.readTimeout.toMillis()))
+                .setResponseTimeout(Timeout.ofMilliseconds(cfg.getReadTimeout().toMillis()))
                 .build();
 
         // 4) HttpClient
@@ -79,8 +137,8 @@ public final class RestHttpClient {
 
         // 5) RequestFactory
         HttpComponentsClientHttpRequestFactory rf = new HttpComponentsClientHttpRequestFactory(httpClient);
-        rf.setConnectTimeout((int) cfg.connectTimeout.toMillis());
-        rf.setReadTimeout((int) cfg.readTimeout.toMillis());
+        rf.setConnectTimeout((int) cfg.getConnectTimeout().toMillis());
+        rf.setReadTimeout((int) cfg.getReadTimeout().toMillis());
 
         // 6) Jackson JavaTime
         ObjectMapper om = new ObjectMapper()
@@ -93,8 +151,8 @@ public final class RestHttpClient {
         rt.getMessageConverters().removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
         rt.getMessageConverters().add(0, jackson);
 
-        // 8) Interceptor Bearer (consulta o supplier de forma atômica a cada requisição)
-        BEARER_SUPPLIER.set(cfg.bearerSupplier != null ? cfg.bearerSupplier : () -> null);
+        // 8) Interceptor Bearer
+        BEARER_SUPPLIER.set(cfg.getBearerSupplier());
         ClientHttpRequestInterceptor auth = (req, body, ex) -> {
             Supplier<String> sup = BEARER_SUPPLIER.get();
             String token = sup != null ? sup.get() : null;
@@ -106,13 +164,20 @@ public final class RestHttpClient {
         };
         rt.getInterceptors().add(auth);
 
-        if (cfg.extraInterceptors != null && !cfg.extraInterceptors.isEmpty()) {
-            rt.getInterceptors().addAll(cfg.extraInterceptors);
+        List<ClientHttpRequestInterceptor> extras = cfg.getExtraInterceptors();
+        if (extras != null && !extras.isEmpty()) {
+            rt.getInterceptors().addAll(extras);
         }
 
         REF.set(rt);
     }
 
+    /** Acesso somente-leitura (opcional) ao baseUrl atual. */
+    public static String getBaseUrl() {
+        return BASE_URL.get();
+    }
+
+    // ===== infra interna =====
     private static RestTemplate rt() {
         RestTemplate r = REF.get();
         if (r == null) {

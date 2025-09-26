@@ -28,18 +28,7 @@ import org.springframework.web.client.RestTemplate;
 
 public class RestHttpClientTest {
 
-    @AfterEach
-    void cleanup() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/base";
-        cfg.connectTimeout = Duration.ofMillis(200);
-        cfg.readTimeout = Duration.ofMillis(200);
-        cfg.bearerSupplier = null;
-        cfg.extraInterceptors = List.of();
-        RestHttpClient.init(cfg);
-    }
-
-    // ===== util: acessar/modificar o RestTemplate interno (sem classes embutidas) =====
+    // --- Utils privados (sem classes embutidas)
     private RestTemplate internalRt() throws Exception {
         Field f = RestHttpClient.class.getDeclaredField("REF");
         f.setAccessible(true);
@@ -60,44 +49,63 @@ public class RestHttpClientTest {
         return MockRestResponseCreators.withSuccess(j, MediaType.APPLICATION_JSON);
     }
 
-    // ==================================================================================
+    @AfterEach
+    void resetDefault() {
+        // Reinit padrão entre testes
+        RestHttpClient.Cfg cfg = RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/base").build();
+        RestHttpClient.init(cfg);
+    }
 
+    // ================== Erro de uso ==================
     @Test
-    @DisplayName("Deve lançar IllegalStateException quando usado sem init()")
-    void notInitialized_throws() throws Exception {
+    @DisplayName("Erro: usar sem init() lança IllegalStateException")
+    void notInitializedThrows() throws Exception {
         setInternalRt(null);
         assertThrows(IllegalStateException.class, () -> RestHttpClient.get("/ping", String.class));
     }
 
+    // ================== init + defaults/validações ==================
     @Test
-    @DisplayName("init aceita nulos em baseUrl/bearerSupplier/extraInterceptors")
-    void init_acceptNulls_ok() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = null;
-        cfg.bearerSupplier = null;
-        cfg.extraInterceptors = null;
+    @DisplayName("init com defaults do Builder (baseUrl \"\") e path absoluto")
+    void initWithDefaultsAndAbsolutePath() throws Exception {
+        RestHttpClient.Cfg cfg = RestHttpClient.Cfg.builder().build(); // baseUrl = ""
         RestHttpClient.init(cfg);
 
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://absolute-host/ok"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://absolute/ok"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andRespond(MockRestResponseCreators.withSuccess("OK", MediaType.TEXT_PLAIN));
 
-        String out = RestHttpClient.get("http://absolute-host/ok", String.class);
+        String out = RestHttpClient.get("http://absolute/ok", String.class);
         assertThat(out).isEqualTo("OK");
         server.verify();
     }
 
     @Test
-    @DisplayName("url(): combinações de barras (base com/sem '/', path com/sem '/')")
-    void url_combinations() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/base/"; // com barra final
-        RestHttpClient.init(cfg);
+    @DisplayName("Builder valida campos: timeouts e pool > 0")
+    void builderValidation() {
+        // connectTimeout <= 0
+        assertThrows(IllegalArgumentException.class, () ->
+            RestHttpClient.Cfg.builder().connectTimeout(Duration.ZERO).build());
+        // readTimeout <= 0
+        assertThrows(IllegalArgumentException.class, () ->
+            RestHttpClient.Cfg.builder().readTimeout(Duration.ZERO).build());
+        // maxTotal <= 0
+        assertThrows(IllegalArgumentException.class, () ->
+            RestHttpClient.Cfg.builder().maxTotal(0).build());
+        // maxPerRoute <= 0
+        assertThrows(IllegalArgumentException.class, () ->
+            RestHttpClient.Cfg.builder().maxPerRoute(0).build());
+    }
 
+    // ================== Montagem de URL ==================
+    @Test
+    @DisplayName("Combinações base/path com e sem barra")
+    void urlCombinations() throws Exception {
+        // base com barra final
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/base/").build());
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
@@ -106,7 +114,6 @@ public class RestHttpClientTest {
                 MockRestRequestMatchers.requestTo(URI.create("http://localhost:8089/base/v1")))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andRespond(json("true"));
-
         // base "/" + path sem "/" -> concatena direto
         server.expect(ExpectedCount.once(),
                 MockRestRequestMatchers.requestTo(URI.create("http://localhost:8089/base/v2")))
@@ -117,10 +124,8 @@ public class RestHttpClientTest {
         assertThat(RestHttpClient.get("v2", String.class)).isEqualTo("true");
         server.verify();
 
-        // troca base para sem barra
-        cfg.baseUrl = "http://localhost:8089/base";
-        RestHttpClient.init(cfg);
-
+        // base sem barra final
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/base").build());
         rt = internalRt();
         server = MockRestServiceServer.bindTo(rt).build();
 
@@ -129,7 +134,6 @@ public class RestHttpClientTest {
                 MockRestRequestMatchers.requestTo(URI.create("http://localhost:8089/base/v3")))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andRespond(json("true"));
-
         // base sem "/" + path sem "/" -> insere "/"
         server.expect(ExpectedCount.once(),
                 MockRestRequestMatchers.requestTo(URI.create("http://localhost:8089/base/v4")))
@@ -142,99 +146,90 @@ public class RestHttpClientTest {
     }
 
     @Test
-    @DisplayName("path absoluto (http/https) ignora baseUrl")
-    void absolute_path_ignores_base() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:9999/ignored";
-        RestHttpClient.init(cfg);
-
+    @DisplayName("Path absoluto ignora baseUrl")
+    void absolutePathIgnoresBase() throws Exception {
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:9999/ignored").build());
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
         String abs = "http://localhost:8089/direct";
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo(abs))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo(abs))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andRespond(json("{\"ok\":true}"));
 
-        Map<String, Object> resp = RestHttpClient.get(abs, new ParameterizedTypeReference<Map<String, Object>>() {});
-        assertThat(resp).containsEntry("ok", true);
+        Map<String, Object> body =
+                RestHttpClient.get(abs, new ParameterizedTypeReference<Map<String, Object>>() {});
+        assertThat(body).containsEntry("ok", true);
         server.verify();
     }
 
+    // ================== Interceptor de Authorization ==================
     @Test
-    @DisplayName("Bearer sem prefixo → adiciona 'Bearer ' automaticamente")
-    void bearer_without_prefix() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/api";
-        cfg.bearerSupplier = () -> "abc123";
+    @DisplayName("Bearer sem prefixo → adiciona 'Bearer '")
+    void bearerWithoutPrefix() throws Exception {
+        RestHttpClient.Cfg cfg = RestHttpClient.Cfg.builder()
+                .baseUrl("http://localhost:8089/api")
+                .bearerSupplier(() -> "abc123")
+                .build();
         RestHttpClient.init(cfg);
 
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/api/ping"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/api/ping"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andExpect(req -> assertThat(req.getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
-                  .isEqualTo("Bearer abc123"))
+                      .isEqualTo("Bearer abc123"))
               .andRespond(MockRestResponseCreators.withSuccess("pong", MediaType.TEXT_PLAIN));
 
-        String out = RestHttpClient.get("/ping", String.class);
-        assertThat(out).isEqualTo("pong");
+        assertThat(RestHttpClient.get("/ping", String.class)).isEqualTo("pong");
         server.verify();
     }
 
     @Test
     @DisplayName("Bearer com prefixo → mantém o valor")
-    void bearer_with_prefix() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/api";
-        cfg.bearerSupplier = () -> "Bearer XYZ";
+    void bearerWithPrefix() throws Exception {
+        RestHttpClient.Cfg cfg = RestHttpClient.Cfg.builder()
+                .baseUrl("http://localhost:8089/api")
+                .bearerSupplier(() -> "Bearer XYZ")
+                .build();
         RestHttpClient.init(cfg);
 
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/api/ping2"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/api/ping2"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andExpect(req -> assertThat(req.getHeaders().getFirst(HttpHeaders.AUTHORIZATION))
-                  .isEqualTo("Bearer XYZ"))
+                      .isEqualTo("Bearer XYZ"))
               .andRespond(MockRestResponseCreators.withSuccess("pong2", MediaType.TEXT_PLAIN));
 
-        String out = RestHttpClient.get("/ping2", String.class);
-        assertThat(out).isEqualTo("pong2");
+        assertThat(RestHttpClient.get("/ping2", String.class)).isEqualTo("pong2");
         server.verify();
     }
 
+    // ================== Métodos Class<T> ==================
     @Test
-    @DisplayName("get/post/put/delete (Class<T>) retornam corpo e usam URLs corretas")
-    void class_based_methods() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/svc";
-        RestHttpClient.init(cfg);
-
+    @DisplayName("get/post/put/delete (Class<T>)")
+    void classBasedMethods() throws Exception {
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/svc").build());
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users/42"))
+        // GET
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users/42"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andRespond(json("\"ok-get\""));
-
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users"))
+        // POST
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.POST))
               .andRespond(json("\"ok-post\""));
-
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users/42"))
+        // PUT
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users/42"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.PUT))
               .andRespond(json("\"ok-put\""));
-
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users/42"))
+        // DELETE
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/svc/users/42"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.DELETE))
               .andRespond(json("\"ok-del\""));
 
@@ -246,38 +241,28 @@ public class RestHttpClientTest {
         server.verify();
     }
 
+    // ================== Métodos ParameterizedTypeReference<R> ==================
     @Test
     @DisplayName("get/post/put/delete (ParameterizedTypeReference<R>)")
-    void typeRef_based_methods() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/data";
-        RestHttpClient.init(cfg);
-
+    void typeRefBasedMethods() throws Exception {
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/data").build());
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.times(1),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andRespond(json("[1,2,3]"));
-
-        server.expect(ExpectedCount.times(1),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.POST))
               .andRespond(json("[4,5]"));
-
-        server.expect(ExpectedCount.times(1),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.PUT))
               .andRespond(json("[6]"));
-
-        server.expect(ExpectedCount.times(1),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/data/nums"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.DELETE))
               .andRespond(json("[9]"));
 
         ParameterizedTypeReference<List<Integer>> type = new ParameterizedTypeReference<List<Integer>>() {};
-
         assertThat(RestHttpClient.get("/nums", type)).containsExactly(1,2,3);
         assertThat(RestHttpClient.post("/nums", Map.of("x",1), type)).containsExactly(4,5);
         assertThat(RestHttpClient.put("/nums", Map.of("x",2), type)).containsExactly(6);
@@ -286,40 +271,32 @@ public class RestHttpClientTest {
         server.verify();
     }
 
+    // ================== exchange(...) ==================
     @Test
     @DisplayName("exchange sem headers (Class<R>)")
-    void exchange_noHeaders_class() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/ex";
-        RestHttpClient.init(cfg);
-
+    void exchangeNoHeadersClass() throws Exception {
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/ex").build());
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/ex/echo"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/ex/echo"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.POST))
               .andRespond(json("\"ok\""));
 
         ResponseEntity<String> resp =
                 RestHttpClient.exchange("/echo", HttpMethod.POST, Map.of("k","v"), String.class);
         assertThat(resp.getBody()).isEqualTo("ok");
-
         server.verify();
     }
 
     @Test
     @DisplayName("exchange com headers (Class<R>)")
-    void exchange_withHeaders_class() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/ex2";
-        RestHttpClient.init(cfg);
-
+    void exchangeWithHeadersClass() throws Exception {
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/ex2").build());
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/ex2/echo2"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/ex2/echo2"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.PUT))
               .andExpect(req -> assertThat(req.getHeaders().getFirst("X-Test")).isEqualTo("yes"))
               .andRespond(json("\"ok2\""));
@@ -329,45 +306,40 @@ public class RestHttpClientTest {
         ResponseEntity<String> resp =
                 RestHttpClient.exchange("/echo2", HttpMethod.PUT, h, Map.of("x",1), String.class);
         assertThat(resp.getBody()).isEqualTo("ok2");
-
         server.verify();
     }
 
     @Test
     @DisplayName("exchange com headers (ParameterizedTypeReference<R>)")
-    void exchange_withHeaders_typeRef() throws Exception {
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/ex3";
-        RestHttpClient.init(cfg);
-
+    void exchangeWithHeadersTypeRef() throws Exception {
+        RestHttpClient.init(RestHttpClient.Cfg.builder().baseUrl("http://localhost:8089/ex3").build());
         RestTemplate rt = internalRt();
         MockRestServiceServer server = MockRestServiceServer.bindTo(rt).build();
 
-        server.expect(ExpectedCount.once(),
-                MockRestRequestMatchers.requestTo("http://localhost:8089/ex3/list"))
+        server.expect(ExpectedCount.once(), MockRestRequestMatchers.requestTo("http://localhost:8089/ex3/list"))
               .andExpect(MockRestRequestMatchers.method(HttpMethod.GET))
               .andRespond(json("[10,11]"));
 
-        ParameterizedTypeReference<List<Integer>> type =
-                new ParameterizedTypeReference<List<Integer>>() {};
+        ParameterizedTypeReference<List<Integer>> type = new ParameterizedTypeReference<List<Integer>>() {};
         ResponseEntity<List<Integer>> resp =
                 RestHttpClient.exchange("/list", HttpMethod.GET, new HttpHeaders(), null, type);
-
         assertThat(resp.getBody()).containsExactly(10, 11);
         server.verify();
     }
 
+    // ================== extraInterceptors ==================
     @Test
-    @DisplayName("extraInterceptors são adicionados ao RestTemplate")
-    void extraInterceptors_added() throws Exception {
+    @DisplayName("extraInterceptors são adicionados e executados")
+    void extraInterceptorsAdded() throws Exception {
         ClientHttpRequestInterceptor addHeader = (req, body, ex) -> {
             req.getHeaders().add("X-Extra", "1");
             return ex.execute(req, body);
         };
 
-        RestHttpClient.Cfg cfg = new RestHttpClient.Cfg();
-        cfg.baseUrl = "http://localhost:8089/inter";
-        cfg.extraInterceptors = List.of(addHeader);
+        RestHttpClient.Cfg cfg = RestHttpClient.Cfg.builder()
+                .baseUrl("http://localhost:8089/inter")
+                .extraInterceptors(List.of(addHeader))
+                .build();
         RestHttpClient.init(cfg);
 
         RestTemplate rt = internalRt();
@@ -379,8 +351,7 @@ public class RestHttpClientTest {
               .andExpect(req -> assertThat(req.getHeaders().getFirst("X-Extra")).isEqualTo("1"))
               .andRespond(MockRestResponseCreators.withSuccess("ok", MediaType.TEXT_PLAIN));
 
-        String out = RestHttpClient.get("/p", String.class);
-        assertThat(out).isEqualTo("ok");
+        assertThat(RestHttpClient.get("/p", String.class)).isEqualTo("ok");
         server.verify();
     }
 }
