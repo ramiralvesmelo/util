@@ -18,7 +18,6 @@ class UrlBuilderTest {
     @Test
     void buildAbsolute_deveJuntarBaseEPath_normalizandoBarras() {
         String out = UrlBuilder.buildAbsolute("https://api.exemplo.com/base/", "/v1//itens");
-        // normaliza path (sem barras duplas no path)
         assertEquals("https://api.exemplo.com/base/v1/itens", out);
     }
 
@@ -31,7 +30,6 @@ class UrlBuilderTest {
         assertEquals("srv.local", u.getHost());
         assertEquals(8080, u.getPort());
         assertEquals("/app/sub/recurso", u.getPath());
-        // query/fragment da base permanecem
         assertEquals("x=1", u.getQuery());
         assertEquals("frag", u.getFragment());
     }
@@ -64,21 +62,19 @@ class UrlBuilderTest {
 
         String out = UrlBuilder.buildAbsolute("https://h.com/api", "v1/i", qp);
 
-        // ordem preservada (LinkedHashMap): a=1&b=x
         URI u = new URI(out);
         assertEquals("/api/v1/i", u.getPath());
-        assertEquals("a=1&b=x", u.getQuery());
+        assertEquals("a=1&b=x", u.getQuery()); // ordem preservada (LinkedHashMap)
     }
 
     // =========================
     // buidlUrl / buildUrl (legado)
     // =========================
     @Test
-    void buidlUrl_devePreservarBarrasDuplas_noComportamentoLegado() {
-        // basePath "/api/" + path "/v1/" = "/api//v1/" (dupla preservada)
+    void buidlUrl_devePreservarBarrasDuplas_noComportamentoLegadoESanitizar() {
         String out = UrlBuilder.buidlUrl("https://h.com/api/", "/v1/", "ABC/123");
-        // sanitize troca "/" por "_"
-        assertTrue(out.contains("/api//v1/ABC_123"), "deveria preservar // no path legado");
+        assertTrue(out.contains("/api//v1/ABC_123"),
+                "deveria preservar // no path legado e sanitizar '/' -> '_'");
     }
 
     @Test
@@ -94,7 +90,6 @@ class UrlBuilderTest {
     @Test
     void escape_deveUsarUrlEncoderComMaisParaEspaco() {
         assertEquals("a+b", UrlBuilder.escape("a b"));
-        // caractere acentuado vira UTF-8 percent-encoded
         assertEquals("%C3%A1", UrlBuilder.escape("á"));
         assertNull(UrlBuilder.escape(null));
     }
@@ -130,9 +125,12 @@ class UrlBuilderTest {
 
     @Test
     void buildAbsoluteStrict_deveFalharQuandoPercentEncodingInvalido() {
-        // %G1 é inválido (G não é hex)
         assertThrows(IllegalArgumentException.class,
-            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%G1y"));
+            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%G1y")); // G não é hex
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%1"));   // incompleto
+        assertThrows(IllegalArgumentException.class,
+            () -> UrlBuilder.buildAbsoluteStrict("https://h.com", "x%"));    // incompleto
     }
 
     @Test
